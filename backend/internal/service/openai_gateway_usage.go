@@ -42,6 +42,8 @@ type OpenAIRecordUsageInput struct {
 	ChannelUsageFields
 }
 
+const openAIOAuthFastCostMultiplier = 2.5
+
 // CyberPolicyUsageInput 是 cyber 拒绝、未走正常 RecordUsage 的请求记录用量的入参。
 // 用量按上游真实 token 计费，与 WS cyber 及正常请求口径一致（InputTokens/OutputTokens
 // 取自上游 response.failed 报告的 usage，即 mark.UpstreamInTok/OutTok）。
@@ -216,6 +218,7 @@ func (s *OpenAIGatewayService) RecordUsage(ctx context.Context, input *OpenAIRec
 		ctx,
 		result,
 		apiKey,
+		billingAccount,
 		billingModels,
 		multiplier,
 		imageMultiplier,
@@ -437,6 +440,7 @@ func (s *OpenAIGatewayService) calculateOpenAIRecordUsageCost(
 	ctx context.Context,
 	result *OpenAIForwardResult,
 	apiKey *APIKey,
+	billingAccount *Account,
 	billingModels []string,
 	multiplier float64,
 	imageMultiplier float64,
@@ -483,6 +487,7 @@ func (s *OpenAIGatewayService) calculateOpenAIRecordUsageCost(
 			cost, err := s.calculateOpenAIRecordUsageTokenCost(
 				ctx,
 				apiKey,
+				billingAccount,
 				candidate,
 				multiplier,
 				tokens,
@@ -572,15 +577,27 @@ func isUsagePricingUnavailableError(err error) bool {
 func (s *OpenAIGatewayService) calculateOpenAIRecordUsageTokenCost(
 	ctx context.Context,
 	apiKey *APIKey,
+	billingAccount *Account,
 	billingModel string,
 	multiplier float64,
 	tokens UsageTokens,
 	serviceTier string,
 	longContextBillingEnabled bool,
 ) (*CostBreakdown, error) {
+	applyOAuthFastPricing := shouldApplyOpenAIOAuthFastPricing(billingAccount, billingModel, serviceTier)
+	if applyOAuthFastPricing {
+		// OAuth Fast for GPT-5.6 / GPT-5.5 is defined from the Standard token
+		// price. Clearing the tier here intentionally bypasses any stale 2x
+		// Priority fields from dynamic, fallback, or channel pricing while keeping
+		// the exact same resolved pricing source.
+		serviceTier = ""
+	}
+
+	var cost *CostBreakdown
+	var err error
 	if s.resolver != nil && apiKey.Group != nil {
 		gid := apiKey.Group.ID
-		return s.billingService.CalculateCostUnified(CostInput{
+		cost, err = s.billingService.CalculateCostUnified(CostInput{
 			Ctx:                       ctx,
 			Model:                     billingModel,
 			GroupID:                   &gid,
@@ -591,14 +608,47 @@ func (s *OpenAIGatewayService) calculateOpenAIRecordUsageTokenCost(
 			Resolver:                  s.resolver,
 			LongContextBillingEnabled: &longContextBillingEnabled,
 		})
+	} else {
+		cost, err = s.billingService.calculateCostWithServiceTierPolicy(
+			billingModel,
+			tokens,
+			multiplier,
+			serviceTier,
+			longContextBillingEnabled,
+		)
 	}
-	return s.billingService.calculateCostWithServiceTierPolicy(
-		billingModel,
-		tokens,
-		multiplier,
-		serviceTier,
-		longContextBillingEnabled,
-	)
+	if err != nil || cost == nil {
+		return cost, err
+	}
+	// A channel may resolve a nominal model request to per-request/image
+	// billing. The OAuth Fast rule only scales token-mode costs.
+	if applyOAuthFastPricing && (cost.BillingMode == "" || cost.BillingMode == string(BillingModeToken)) {
+		scaleOpenAIOAuthFastTokenCost(cost)
+	}
+	return cost, nil
+}
+
+func shouldApplyOpenAIOAuthFastPricing(billingAccount *Account, billingModel, serviceTier string) bool {
+	if billingAccount == nil || !billingAccount.IsOpenAIOAuth() || normalizeBillingServiceTier(serviceTier) != "priority" {
+		return false
+	}
+
+	normalizedModel := normalizeKnownOpenAICodexModel(billingModel)
+	return isOpenAIGPT56Model(normalizedModel) || normalizedModel == "gpt-5.5"
+}
+
+func scaleOpenAIOAuthFastTokenCost(cost *CostBreakdown) {
+	if cost == nil {
+		return
+	}
+	cost.InputCost *= openAIOAuthFastCostMultiplier
+	cost.ImageInputCost *= openAIOAuthFastCostMultiplier
+	cost.OutputCost *= openAIOAuthFastCostMultiplier
+	cost.ImageOutputCost *= openAIOAuthFastCostMultiplier
+	cost.CacheCreationCost *= openAIOAuthFastCostMultiplier
+	cost.CacheReadCost *= openAIOAuthFastCostMultiplier
+	cost.TotalCost *= openAIOAuthFastCostMultiplier
+	cost.ActualCost *= openAIOAuthFastCostMultiplier
 }
 
 func (s *OpenAIGatewayService) calculateOpenAIImageCost(
