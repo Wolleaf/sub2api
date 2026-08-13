@@ -329,6 +329,19 @@ func ProvideAccountExpiryService(accountRepo AccountRepository) *AccountExpirySe
 	return svc
 }
 
+// ProvideOpenAIWeeklyResetSyncService creates the five-minute upstream weekly
+// window poller. Its first run also invalidates all eligible Redis entries so a
+// restart can recover cache invalidations that failed before shutdown.
+func ProvideOpenAIWeeklyResetSyncService(
+	repo OpenAIWeeklyResetSyncRepository,
+	quotaService *OpenAIQuotaService,
+	billingCacheService *BillingCacheService,
+) *OpenAIWeeklyResetSyncService {
+	svc := NewOpenAIWeeklyResetSyncService(repo, quotaService, billingCacheService, openAIWeeklySyncInterval)
+	svc.Start()
+	return svc
+}
+
 // ProvideOpenAICodexVersionSyncService creates and starts OpenAICodexVersionSyncService.
 // 出站 Codex 身份的版本号靠它跟随官方发布，无需为了跟版本而发新版本；面板可关闭。
 func ProvideOpenAICodexVersionSyncService(
@@ -830,6 +843,7 @@ var ProviderSet = wire.NewSet(
 	ProvideTokenRefreshService,
 	wire.Bind(new(GrokOAuthReconciler), new(*TokenRefreshService)),
 	ProvideAccountExpiryService,
+	ProvideOpenAIWeeklyResetSyncService,
 	ProvideOpenAICodexVersionSyncService,
 	ProvideProxyExpiryService,
 	ProvideSubscriptionExpiryService,
