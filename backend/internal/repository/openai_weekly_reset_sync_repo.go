@@ -56,7 +56,7 @@ func (r *openAIWeeklyResetSyncRepository) ListCandidates(ctx context.Context) (*
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	byGroup := make(map[int64][]openAIWeeklyResetTopologyRow)
 	groupOrder := make([]int64, 0)
@@ -192,7 +192,7 @@ func openAIWeeklyResetAccountGroups(ctx context.Context, tx *sql.Tx, accountID i
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var groupIDs []int64
 	for rows.Next() {
 		var groupID int64
@@ -216,7 +216,7 @@ func openAIWeeklyResetGroupTopology(ctx context.Context, tx *sql.Tx, groupID int
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var topology []openAIWeeklyResetTopologyRow
 	for rows.Next() {
 		var row openAIWeeklyResetTopologyRow
