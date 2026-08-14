@@ -29,10 +29,24 @@
         <label class="input-label">{{ t('admin.users.form.roleLabel') }}</label>
         <select v-model="form.role" class="input">
           <option value="user">{{ t('admin.users.roles.user') }}</option>
+          <option value="readonly">{{ t('admin.users.roles.readonly') }}</option>
           <option value="admin">{{ t('admin.users.roles.admin') }}</option>
         </select>
+        <p v-if="form.role === 'readonly'" class="input-hint">{{ t('admin.users.form.readonlyHint') }}</p>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div v-if="form.role === 'readonly'" class="space-y-2">
+        <label class="input-label">{{ t('admin.users.form.readonlyGroups') }}</label>
+        <div v-if="groupsLoading" class="text-sm text-gray-500 dark:text-dark-400">{{ t('common.loading') }}</div>
+        <div v-else-if="availableGroups.length" class="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-gray-200 p-3 dark:border-dark-700">
+          <label v-for="group in availableGroups" :key="group.id" class="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-gray-50 dark:hover:bg-dark-800">
+            <input v-model="form.allowed_groups" type="checkbox" :value="group.id" class="h-4 w-4 rounded border-gray-300 text-primary-600" />
+            <span class="min-w-0 flex-1 truncate text-sm text-gray-800 dark:text-gray-200">{{ group.name }}</span>
+            <span class="text-xs text-gray-500 dark:text-dark-400">{{ group.platform }}</span>
+          </label>
+        </div>
+        <p v-else class="text-sm text-gray-500 dark:text-dark-400">{{ t('common.noGroupsAvailable') }}</p>
+      </div>
+      <div v-if="form.role !== 'readonly'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label class="input-label">{{ t('admin.users.columns.balance') }}</label>
           <input v-model="form.balance" type="number" step="any" class="input" />
@@ -42,7 +56,7 @@
           <input v-model.number="form.concurrency" type="number" class="input" />
         </div>
       </div>
-      <div>
+      <div v-if="form.role !== 'readonly'">
         <label class="input-label">{{ t('admin.users.form.rpmLimit') }}</label>
         <input
           v-model.number="form.rpm_limit"
@@ -77,15 +91,38 @@ import BaseDialog from '@/components/common/BaseDialog.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { useStepUp, isStepUpBlocked, isStepUpCancelled, stepUpBlockReason } from '@/composables/useStepUp'
 import TotpStepUpDialog from '@/components/auth/TotpStepUpDialog.vue'
+import type { AdminGroup } from '@/types'
 
 const props = defineProps<{ show: boolean }>()
 const emit = defineEmits(['close', 'success']); const { t } = useI18n()
 const appStore = useAppStore()
 
-const form = reactive({ email: '', password: '', username: '', notes: '', role: 'user' as 'user' | 'admin', balance: '', concurrency: 1, rpm_limit: 0 })
+const form = reactive({
+  email: '',
+  password: '',
+  username: '',
+  notes: '',
+  role: 'user' as 'user' | 'readonly' | 'admin',
+  balance: '',
+  concurrency: 1,
+  rpm_limit: 0,
+  allowed_groups: [] as number[]
+})
 
 const stepUp = useStepUp()
 const loading = ref(false)
+const groupsLoading = ref(false)
+const availableGroups = ref<AdminGroup[]>([])
+
+const loadAvailableGroups = async () => {
+  if (availableGroups.value.length || groupsLoading.value) return
+  groupsLoading.value = true
+  try {
+    availableGroups.value = await adminAPI.groups.getAll()
+  } finally {
+    groupsLoading.value = false
+  }
+}
 
 const submit = async () => {
   if (loading.value) return
@@ -116,7 +153,13 @@ const submit = async () => {
   } finally { loading.value = false }
 }
 
-watch(() => props.show, (v) => { if(v) Object.assign(form, { email: '', password: '', username: '', notes: '', role: 'user', balance: '', concurrency: 1, rpm_limit: 0 }) })
+watch(() => props.show, (v) => {
+  if (v) Object.assign(form, { email: '', password: '', username: '', notes: '', role: 'user', balance: '', concurrency: 1, rpm_limit: 0, allowed_groups: [] })
+})
+
+watch(() => form.role, (role) => {
+  if (role === 'readonly') void loadAvailableGroups()
+})
 
 const generateRandomPassword = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*'

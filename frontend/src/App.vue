@@ -54,7 +54,7 @@ watch(
 
 // Watch for authentication state and manage subscription data + announcements
 function onVisibilityChange() {
-  if (document.visibilityState === 'visible' && authStore.isAuthenticated) {
+  if (document.visibilityState === 'visible' && authStore.isAuthenticated && !authStore.isReadonlyAdmin) {
     announcementStore.fetchAnnouncements()
   }
 }
@@ -65,9 +65,10 @@ function onAdminComplianceRequired(event: Event) {
 }
 
 watch(
-  () => authStore.isAuthenticated,
-  (isAuthenticated, oldValue) => {
-    if (isAuthenticated) {
+  [() => authStore.isAuthenticated, () => authStore.isReadonlyAdmin],
+  ([isAuthenticated, isReadonlyAdmin], previous) => {
+    const oldValue = previous?.[0]
+    if (isAuthenticated && !isReadonlyAdmin) {
       if (authStore.isAdmin) {
         adminComplianceStore.fetchStatus().catch((error) => {
           console.error('Failed to fetch admin compliance status:', error)
@@ -104,7 +105,7 @@ watch(
 
 // Route change trigger (throttled by store)
 router.afterEach(() => {
-  if (authStore.isAuthenticated) {
+  if (authStore.isAuthenticated && !authStore.isReadonlyAdmin) {
     announcementStore.fetchAnnouncements()
   }
 })
@@ -140,6 +141,6 @@ onMounted(async () => {
   <NavigationProgress />
   <RouterView />
   <Toast />
-  <AnnouncementPopup />
+  <AnnouncementPopup v-if="!authStore.isReadonlyAdmin" />
   <AdminComplianceDialog />
 </template>

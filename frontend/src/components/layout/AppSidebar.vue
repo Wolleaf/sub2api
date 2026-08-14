@@ -31,8 +31,26 @@
 
     <!-- Navigation -->
     <nav ref="sidebarNavRef" class="sidebar-nav scrollbar-hide">
+      <!-- Scoped readonly administrator view -->
+      <template v-if="isReadonlyAdmin">
+        <div class="sidebar-section">
+          <router-link
+            v-for="item in readonlyNavItems"
+            :key="item.path"
+            :to="item.path"
+            class="sidebar-link mb-1"
+            :class="{ 'sidebar-link-active': isActive(item.path), 'sidebar-link-collapsed': sidebarCollapsed }"
+            :title="sidebarCollapsed ? item.label : undefined"
+            @click="handleMenuItemClick(item.path)"
+          >
+            <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
+            <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ item.label }}</span>
+          </router-link>
+        </div>
+      </template>
+
       <!-- Admin View: Admin menu first, then personal menu -->
-      <template v-if="isAdmin">
+      <template v-else-if="isAdmin">
         <!-- Admin Section -->
         <div class="sidebar-section">
           <template v-for="item in adminNavItems" :key="item.path">
@@ -149,6 +167,17 @@
 
     <!-- Bottom Section -->
     <div class="mt-auto border-t border-gray-100 p-3 dark:border-dark-800">
+      <button
+        v-if="isReadonlyAdmin"
+        @click="handleLogout"
+        class="sidebar-link w-full text-red-600 dark:text-red-400"
+        :class="{ 'sidebar-link-collapsed': sidebarCollapsed }"
+        :title="sidebarCollapsed ? t('nav.logout') : undefined"
+      >
+        <LogoutIcon class="h-5 w-5 flex-shrink-0" />
+        <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ t('nav.logout') }}</span>
+      </button>
+      <template v-else>
       <!-- Theme Toggle -->
       <button
         @click="toggleTheme"
@@ -174,6 +203,7 @@
         <ChevronDoubleRightIcon v-else class="h-5 w-5 flex-shrink-0" />
         <span class="sidebar-label" :class="{ 'sidebar-label-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">{{ t('nav.collapse') }}</span>
       </button>
+      </template>
     </div>
   </aside>
 
@@ -247,10 +277,13 @@ const { canUseBatchImage, refreshBatchImageAccess } = useBatchImageAccess()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
 const isAdmin = computed(() => authStore.isAdmin)
+const isReadonlyAdmin = computed(() => authStore.isReadonlyAdmin)
 const sidebarNavRef = ref<HTMLElement | null>(null)
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
-const homePath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
+const homePath = computed(() =>
+  isReadonlyAdmin.value ? '/readonly/accounts' : isAdmin.value ? '/admin/dashboard' : '/dashboard'
+)
 
 // Track which parent nav groups are expanded
 const expandedGroups = ref<Set<string>>(new Set())
@@ -552,6 +585,21 @@ const MoonIcon = {
     )
 }
 
+const LogoutIcon = {
+  render: () =>
+    h(
+      'svg',
+      { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', 'stroke-width': '1.5' },
+      [
+        h('path', {
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round',
+          d: 'M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75'
+        })
+      ]
+    )
+}
+
 const ChevronDoubleLeftIcon = {
   render: () =>
     h(
@@ -730,6 +778,11 @@ function finalizeNav(items: NavItem[]): NavItem[] {
 // User navigation items (for regular users)
 const userNavItems = computed((): NavItem[] => finalizeNav(buildSelfNavItems(true)))
 
+const readonlyNavItems = computed((): NavItem[] => [
+  { path: '/readonly/accounts', label: t('readonly.nav.accounts'), icon: GlobeIcon },
+  { path: '/readonly/groups', label: t('readonly.nav.groups'), icon: FolderIcon }
+])
+
 // Personal navigation items (for admin's "My Account" section, without Dashboard).
 // Admins access 可用渠道 from this section just like regular users — there is no
 // separate admin entry, since the page is purely a user-facing view.
@@ -849,6 +902,11 @@ function closeMobile() {
   appStore.setMobileOpen(false)
 }
 
+async function handleLogout() {
+  await authStore.logout()
+  await router.push('/login')
+}
+
 function handleMenuItemClick(itemPath: string) {
   if (mobileOpen.value) {
     setTimeout(() => {
@@ -934,7 +992,9 @@ watch(
 )
 
 onMounted(() => {
-  void refreshBatchImageAccess()
+  if (!isReadonlyAdmin.value) {
+    void refreshBatchImageAccess()
+  }
   if (isAdmin.value) {
     adminSettingsStore.fetch()
   }

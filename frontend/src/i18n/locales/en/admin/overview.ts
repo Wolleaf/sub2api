@@ -502,6 +502,11 @@ export default {
         passwordLabel: 'Password',
         passwordPlaceholder: 'Enter password (leave empty to keep unchanged)',
         roleLabel: 'Role',
+        readonlyHint:
+          'Read-only administrators can only view the selected groups and redacted account status. They can never view API keys.',
+        readonlyGroups: 'Groups this account may view',
+        readonlyTransitionHint:
+          'The target must have no API keys or active subscriptions. Configure its exact scope under Groups.',
         selectRole: 'Select role',
         balanceLabel: 'Balance',
         concurrencyLabel: 'Concurrency',
@@ -665,6 +670,7 @@ export default {
       totalRecharged: 'Total Recharged',
       roles: {
         admin: 'Admin',
+        readonly: 'Scoped readonly admin',
         user: 'User'
       },
       // Settings Dropdowns

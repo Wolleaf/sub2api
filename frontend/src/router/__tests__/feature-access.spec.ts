@@ -14,6 +14,7 @@ const authStore = vi.hoisted(() => ({
   checkAuth: vi.fn(),
   isAuthenticated: true,
   isAdmin: false,
+  isReadonlyAdmin: false,
   isSimpleMode: false,
   hasPendingAuthSession: false,
 }))
@@ -113,6 +114,7 @@ describe('feature route guard', () => {
   beforeEach(() => {
     authStore.isAuthenticated = true
     authStore.isAdmin = false
+    authStore.isReadonlyAdmin = false
     authStore.isSimpleMode = false
     appStore.publicSettingsLoaded = false
     appStore.cachedPublicSettings = null

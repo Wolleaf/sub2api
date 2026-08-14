@@ -554,6 +554,7 @@ export default {
       deleteConfirm: "确定要删除用户 '{email}' 吗？此操作无法撤销。",
       roles: {
         admin: '管理员',
+        readonly: '分组只读管理员',
         user: '用户'
       },
       form: {
@@ -567,6 +568,9 @@ export default {
         passwordLabel: '密码',
         passwordPlaceholder: '请输入密码（留空则不修改）',
         roleLabel: '角色',
+        readonlyHint: '只读管理员只能查看所选分组与脱敏账号状态，不能查看任何 API Key。',
+        readonlyGroups: '允许查看的分组',
+        readonlyTransitionHint: '转换前必须确保该用户没有 API Key 和有效订阅；分组范围可在“分组”中配置。',
         selectRole: '选择角色',
         balanceLabel: '余额',
         concurrencyLabel: '并发数',

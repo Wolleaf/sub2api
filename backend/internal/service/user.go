@@ -68,6 +68,16 @@ func (u *User) IsAdmin() bool {
 	return u.Role == RoleAdmin
 }
 
+func (u *User) IsReadonlyAdmin() bool {
+	return u.Role == RoleReadonly
+}
+
+// CanAccessAdmin reports whether the user may authenticate against the admin
+// surface. Fine-grained readonly authorization is enforced by route guards.
+func (u *User) CanAccessAdmin() bool {
+	return u.IsAdmin() || u.IsReadonlyAdmin()
+}
+
 func (u *User) IsActive() bool {
 	return u.Status == StatusActive
 }

@@ -24,11 +24,11 @@
       <!-- Right: Announcements + Docs + Language + Subscriptions + Balance + User Dropdown -->
       <div class="flex min-w-0 items-center gap-1 sm:gap-3">
         <!-- Announcement Bell -->
-        <AnnouncementBell v-if="user" />
+        <AnnouncementBell v-if="user && !isReadonlyAdmin" />
 
         <!-- Docs Link -->
         <a
-          v-if="docUrl"
+          v-if="docUrl && !isReadonlyAdmin"
           :href="docUrl"
           target="_blank"
           rel="noopener noreferrer"
@@ -40,7 +40,7 @@
 
         <!-- Model Plaza Entry -->
         <router-link
-          v-if="user && modelPlazaEnabled"
+          v-if="user && modelPlazaEnabled && !isReadonlyAdmin"
           :to="{ path: '/model-plaza', query: { embedded: '1' } }"
           class="hidden items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-dark-400 dark:hover:bg-dark-800 dark:hover:text-white sm:flex"
         >
@@ -52,11 +52,11 @@
         <LocaleSwitcher />
 
         <!-- Subscription Progress (for users with active subscriptions) -->
-        <SubscriptionProgressMini v-if="user" />
+        <SubscriptionProgressMini v-if="user && !isReadonlyAdmin" />
 
         <!-- Balance Display -->
         <div
-          v-if="user"
+          v-if="user && !isReadonlyAdmin"
           class="group relative hidden items-center gap-2 rounded-xl bg-primary-50 px-3 py-1.5 dark:bg-primary-900/20 sm:flex"
         >
           <svg
@@ -102,7 +102,7 @@
         </div>
 
         <!-- User Dropdown -->
-        <div v-if="user" class="relative" ref="dropdownRef">
+        <div v-if="user && !isReadonlyAdmin" class="relative" ref="dropdownRef">
           <button
             @click="toggleDropdown"
             class="flex items-center gap-2 rounded-xl p-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-dark-800"
@@ -271,6 +271,7 @@ const adminSettingsStore = useAdminSettingsStore()
 const onboardingStore = useOnboardingStore()
 
 const user = computed(() => authStore.user)
+const isReadonlyAdmin = computed(() => authStore.isReadonlyAdmin)
 const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 const contactInfo = computed(() => appStore.contactInfo)

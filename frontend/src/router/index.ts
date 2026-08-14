@@ -396,6 +396,36 @@ const routes: RouteRecordRaw[] = [
     }
   },
 
+  // ==================== Scoped Readonly Admin Routes ====================
+  {
+    path: '/readonly',
+    redirect: '/readonly/accounts'
+  },
+  {
+    path: '/readonly/accounts',
+    name: 'ReadonlyAccounts',
+    component: () => import('@/views/readonly/AccountsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresReadonlyAccess: true,
+      title: 'Account Information',
+      titleKey: 'readonly.accounts.title',
+      descriptionKey: 'readonly.accounts.description'
+    }
+  },
+  {
+    path: '/readonly/groups',
+    name: 'ReadonlyGroups',
+    component: () => import('@/views/readonly/GroupsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresReadonlyAccess: true,
+      title: 'Group Information',
+      titleKey: 'readonly.groups.title',
+      descriptionKey: 'readonly.groups.description'
+    }
+  },
+
   // ==================== Admin Routes ====================
   {
     path: '/admin',
@@ -790,12 +820,17 @@ router.beforeEach(async (to, _from, next) => {
   // Check if route requires authentication
   const requiresAuth = to.meta.requiresAuth !== false // Default to true
   const requiresAdmin = to.meta.requiresAdmin === true
+  const requiresReadonlyAccess = to.meta.requiresReadonlyAccess === true
 
   if (to.path === '/setup') {
     try {
       const status = await getSetupStatus()
       if (!status.needs_setup) {
-        next(resolveCompletedSetupRedirectPath(authStore.isAuthenticated, authStore.isAdmin))
+        next(
+          authStore.isAuthenticated && authStore.isReadonlyAdmin
+            ? '/readonly/accounts'
+            : resolveCompletedSetupRedirectPath(authStore.isAuthenticated, authStore.isAdmin)
+        )
         return
       }
     } catch {
@@ -805,6 +840,11 @@ router.beforeEach(async (to, _from, next) => {
 
   // If route doesn't require auth, allow access
   if (!requiresAuth) {
+    // A scoped readonly administrator never falls back to public/user pages.
+    if (authStore.isAuthenticated && authStore.isReadonlyAdmin) {
+      next('/readonly/accounts')
+      return
+    }
     // If already authenticated and trying to access login/register, redirect to appropriate dashboard
     if (authStore.isAuthenticated && (to.path === '/login' || to.path === '/register')) {
       // In backend mode, non-admin users should NOT be redirected away from login
@@ -867,6 +907,18 @@ router.beforeEach(async (to, _from, next) => {
       path: '/login',
       query: { redirect: to.fullPath } // Save intended destination
     })
+    return
+  }
+
+  // Scoped readonly administrators are locked to the two dedicated views.
+  // This is an experience guard only; backend route guards remain authoritative.
+  if (authStore.isReadonlyAdmin && !requiresReadonlyAccess) {
+    next('/readonly/accounts')
+    return
+  }
+
+  if (requiresReadonlyAccess && !authStore.isReadonlyAdmin && !authStore.isAdmin) {
+    next('/dashboard')
     return
   }
 
@@ -942,7 +994,10 @@ router.beforeEach(async (to, _from, next) => {
 
   // Backend mode: admin gets full access, non-admin blocked
   if (appStore.backendModeEnabled) {
-    if (authStore.isAuthenticated && authStore.isAdmin) {
+    if (
+      authStore.isAuthenticated &&
+      (authStore.isAdmin || (authStore.isReadonlyAdmin && requiresReadonlyAccess))
+    ) {
       next()
       return
     }

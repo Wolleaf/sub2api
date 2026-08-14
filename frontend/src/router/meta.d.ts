@@ -20,6 +20,13 @@ declare module 'vue-router' {
     requiresAdmin?: boolean
 
     /**
+     * Whether this route is part of the scoped readonly administrator surface.
+     * Full administrators may also open it; ordinary users may not.
+     * @default false
+     */
+    requiresReadonlyAccess?: boolean
+
+    /**
      * Page title for this route
      */
     title?: string

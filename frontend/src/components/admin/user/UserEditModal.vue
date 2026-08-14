@@ -33,18 +33,20 @@
         <label class="input-label">{{ t('admin.users.form.roleLabel') }}</label>
         <select v-model="form.role" class="input">
           <option value="user">{{ t('admin.users.roles.user') }}</option>
+          <option value="readonly">{{ t('admin.users.roles.readonly') }}</option>
           <option value="admin">{{ t('admin.users.roles.admin') }}</option>
         </select>
+        <p v-if="form.role === 'readonly'" class="input-hint">{{ t('admin.users.form.readonlyTransitionHint') }}</p>
       </div>
       <div>
         <label class="input-label">{{ t('admin.users.notes') }}</label>
         <textarea v-model="form.notes" rows="3" class="input"></textarea>
       </div>
-      <div>
+      <div v-if="form.role !== 'readonly'">
         <label class="input-label">{{ t('admin.users.columns.concurrency') }}</label>
         <input v-model.number="form.concurrency" type="number" class="input" />
       </div>
-      <div>
+      <div v-if="form.role !== 'readonly'">
         <label class="input-label">{{ t('admin.users.form.rpmLimit') }}</label>
         <input
           v-model.number="form.rpm_limit"

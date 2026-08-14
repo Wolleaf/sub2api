@@ -7,13 +7,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 )
 
-// 角色提升为管理员的 step-up 门控条件测试。
+// 管理员和只读管理员角色变更的 step-up 门控条件测试。
 // 测试环境不注入认证上下文，因此门控一旦触发会以 401 中止；
 // 借此区分「触发了 step-up 校验」与「直接放行到业务层（200）」。
 func setupRoleStepUpRouter(t *testing.T) (*gin.Engine, *stubAdminService) {
@@ -76,6 +77,22 @@ func TestCreateAdminUserRequiresStepUp(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }
 
+func TestUpdateUserConvertToReadonlyRequiresStepUp(t *testing.T) {
+	router, _ := setupRoleStepUpRouter(t)
+
+	rec := doJSON(t, router, http.MethodPut, "/api/v1/admin/users/1", map[string]any{"role": "readonly"})
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestCreateReadonlyUserRequiresStepUp(t *testing.T) {
+	router, _ := setupRoleStepUpRouter(t)
+
+	rec := doJSON(t, router, http.MethodPost, "/api/v1/admin/users", map[string]any{
+		"email": "new-readonly@example.com", "password": "pass123", "role": "readonly",
+	})
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
 func TestCreateRegularUserSkipsStepUp(t *testing.T) {
 	router, _ := setupRoleStepUpRouter(t)
 
@@ -83,4 +100,23 @@ func TestCreateRegularUserSkipsStepUp(t *testing.T) {
 		"email": "new-user@example.com", "password": "pass123", "role": "user",
 	})
 	require.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestUpdateUserCannotDemoteCurrentAdminToReadonly(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	adminSvc := newStubAdminService()
+	adminSvc.users = append(adminSvc.users, service.User{
+		ID: 2, Email: "admin@example.com", Role: service.RoleAdmin, Status: service.StatusActive,
+	})
+	router.Use(func(c *gin.Context) {
+		c.Set(string(middleware.ContextKeyUser), middleware.AuthSubject{UserID: 2})
+		c.Next()
+	})
+	h := NewUserHandler(adminSvc, nil, nil, nil, nil, nil, nil)
+	router.PUT("/api/v1/admin/users/:id", h.Update)
+
+	rec := doJSON(t, router, http.MethodPut, "/api/v1/admin/users/2", map[string]any{"role": "readonly"})
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "cannot demote yourself")
 }

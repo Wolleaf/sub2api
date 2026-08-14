@@ -76,7 +76,7 @@
                 </div>
 
                 <!-- 专属倍率输入 -->
-                <div class="flex flex-shrink-0 items-center gap-3">
+                <div v-if="!isReadonly" class="flex flex-shrink-0 items-center gap-3">
                   <label class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.customRate') }}</label>
                   <input
                     type="number"
@@ -98,7 +98,7 @@
           <div class="mb-3 flex items-center gap-2">
             <div class="h-1.5 w-1.5 rounded-full bg-green-500"></div>
             <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.users.publicGroups') }}</h4>
-            <span class="text-xs text-gray-400">({{ publicGroupConfigs.length }})</span>
+            <span class="text-xs text-gray-400">({{ isReadonly ? publicGroupConfigs.filter(c => c.isSelected).length + '/' : '' }}{{ publicGroupConfigs.length }})</span>
           </div>
           <div class="grid gap-3">
             <div
@@ -107,9 +107,22 @@
               class="relative overflow-hidden rounded-xl border-2 border-green-200 bg-green-50/50 p-4 dark:border-green-800/50 dark:bg-green-900/10"
             >
               <div class="flex items-center gap-4">
-                <!-- 复选框（禁用状态） -->
+                <!-- 只读管理员按 allowed_groups 精确授权；普通用户公开分组仍默认可用 -->
                 <div class="flex-shrink-0">
-                  <div class="flex h-5 w-5 items-center justify-center rounded-md border-2 border-green-400 bg-green-500 dark:border-green-600 dark:bg-green-600">
+                  <label v-if="isReadonly" class="relative flex h-6 w-6 cursor-pointer items-center justify-center">
+                    <input
+                      type="checkbox"
+                      :checked="config.isSelected"
+                      @change="toggleExclusiveGroup(config.groupId)"
+                      class="peer sr-only"
+                    />
+                    <div class="h-5 w-5 rounded-md border-2 border-gray-300 transition-all peer-checked:border-primary-500 peer-checked:bg-primary-500 dark:border-dark-500 peer-checked:dark:border-primary-500">
+                      <svg v-if="config.isSelected" class="h-full w-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </label>
+                  <div v-else class="flex h-5 w-5 items-center justify-center rounded-md border-2 border-green-400 bg-green-500 dark:border-green-600 dark:bg-green-600">
                     <svg class="h-full w-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -134,7 +147,7 @@
                 </div>
 
                 <!-- 专属倍率输入 -->
-                <div class="flex flex-shrink-0 items-center gap-3">
+                <div v-if="!isReadonly" class="flex flex-shrink-0 items-center gap-3">
                   <label class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ t('admin.users.customRate') }}</label>
                   <input
                     type="number"
@@ -207,6 +220,7 @@ const groupConfigs = ref<GroupRateConfig[]>([])
 const originalGroupRates = ref<Record<number, number>>({}) // 记录原始专属倍率，用于检测删除
 const loading = ref(false)
 const submitting = ref(false)
+const isReadonly = computed(() => props.user?.role === 'readonly')
 
 // 分离专属分组和公开分组
 const exclusiveGroups = computed(() => groups.value.filter((g) => g.is_exclusive))
@@ -228,8 +242,11 @@ const load = async () => {
   loading.value = true
   try {
     const res = await adminAPI.groups.list(1, 1000)
-    // 只显示标准类型且活跃的分组
-    groups.value = res.items.filter((g) => g.subscription_type === 'standard' && g.status === 'active')
+    // 只读管理员的 allowed_groups 是精确查看范围，包含全部活跃分组类型。
+    // 普通用户保留原来的标准分组行为。
+    groups.value = res.items.filter((g) =>
+      g.status === 'active' && (isReadonly.value || g.subscription_type === 'standard')
+    )
 
     // 初始化配置
     const userAllowedGroups = props.user?.allowed_groups || []
@@ -245,9 +262,9 @@ const load = async () => {
       isExclusive: g.is_exclusive,
       defaultRate: g.rate_multiplier,
       customRate: userGroupRates[g.id] ?? null,
-      // 专属分组：检查是否在 allowed_groups 中
-      // 公开分组：始终选中
-      isSelected: g.is_exclusive ? userAllowedGroups.includes(g.id) : true,
+      // 只读管理员：所有类型都按 allowed_groups 精确选择。
+      // 普通用户：专属分组检查 allowed_groups，公开分组始终可用。
+      isSelected: isReadonly.value ? userAllowedGroups.includes(g.id) : (g.is_exclusive ? userAllowedGroups.includes(g.id) : true),
     }))
   } catch (error) {
     console.error('Failed to load groups:', error)
@@ -258,7 +275,7 @@ const load = async () => {
 
 const toggleExclusiveGroup = (groupId: number) => {
   const config = groupConfigs.value.find((c) => c.groupId === groupId)
-  if (config && config.isExclusive) {
+  if (config && (config.isExclusive || isReadonly.value)) {
     config.isSelected = !config.isSelected
   }
 }
@@ -280,14 +297,16 @@ const handleSave = async () => {
   submitting.value = true
 
   try {
-    // 构建 allowed_groups（仅包含专属分组中被勾选的）
-    const allowedGroups = groupConfigs.value.filter((c) => c.isExclusive && c.isSelected).map((c) => c.groupId)
+    // 只读管理员精确保存所有已选分组；普通用户仍只保存专属分组。
+    const allowedGroups = groupConfigs.value
+      .filter((c) => c.isSelected && (isReadonly.value || c.isExclusive))
+      .map((c) => c.groupId)
 
     // 构建 group_rates
     // - 有新专属倍率: 设置为该值
     // - 原本有专属倍率但现在被清空: 设置为 null（表示删除）
     const groupRates: Record<number, number | null> = {}
-    for (const c of groupConfigs.value) {
+    for (const c of isReadonly.value ? [] : groupConfigs.value) {
       const hadOriginalRate = originalGroupRates.value[c.groupId] !== undefined
 
       if (c.customRate !== null) {

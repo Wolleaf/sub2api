@@ -22,12 +22,17 @@ func RegisterAdminRoutes(
 ) {
 	admin := v1.Group("/admin")
 	admin.Use(gin.HandlerFunc(adminAuth))
+	// Readonly administrators are denied by default and may only reach the
+	// purpose-built redacted endpoints registered below.
+	admin.Use(middleware.ReadonlyAdminGuard())
 	// 面板全局按用户限流（默认管理员豁免，可在系统设置中关闭豁免）
 	admin.Use(panelRateLimiter.Global())
 	// 审计中间件挂在认证之后：所有管理面变更类操作 + 敏感读取入审计日志
 	admin.Use(gin.HandlerFunc(auditLog))
 	admin.Use(middleware.AdminComplianceGuard(settingService))
 	{
+		registerReadonlyAdminRoutes(admin, h)
+
 		// 部署与运营合规确认
 		registerAdminComplianceRoutes(admin, h)
 
@@ -121,6 +126,16 @@ func RegisterAdminRoutes(
 
 		// 操作审计日志
 		registerAuditLogRoutes(admin, h, stepUpAuth)
+	}
+}
+
+func registerReadonlyAdminRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
+	readonly := admin.Group("/readonly")
+	{
+		readonly.GET("/groups", h.Admin.Readonly.ListGroups)
+		readonly.GET("/groups/:id", h.Admin.Readonly.GetGroup)
+		readonly.GET("/accounts", h.Admin.Readonly.ListAccounts)
+		readonly.GET("/accounts/:id", h.Admin.Readonly.GetAccount)
 	}
 }
 

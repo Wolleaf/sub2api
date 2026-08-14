@@ -15,6 +15,10 @@ func AdminComplianceGuard(settingService *service.SettingService) gin.HandlerFun
 			c.Next()
 			return
 		}
+		if role, _ := GetUserRoleFromContext(c); role == service.RoleReadonly {
+			c.Next()
+			return
+		}
 
 		subject, ok := GetAuthSubjectFromContext(c)
 		if !ok {

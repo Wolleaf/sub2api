@@ -51,6 +51,7 @@ vi.mock('@/api/auth', () => ({
 interface MockAuthState {
   isAuthenticated: boolean
   isAdmin: boolean
+  isReadonlyAdmin?: boolean
   isSimpleMode: boolean
   backendModeEnabled: boolean
   hasPendingAuthSession: boolean
@@ -67,13 +68,20 @@ function simulateGuard(
 ): string | null {
   const requiresAuth = toMeta.requiresAuth !== false
   const requiresAdmin = toMeta.requiresAdmin === true
+  const requiresReadonlyAccess = toMeta.requiresReadonlyAccess === true
 
   if (toPath === '/setup' && authState.setupNeedsSetup === false) {
+    if (authState.isAuthenticated && authState.isReadonlyAdmin) {
+      return '/readonly/accounts'
+    }
     return resolveCompletedSetupRedirectPath(authState.isAuthenticated, authState.isAdmin)
   }
 
   // 不需要认证的路由
   if (!requiresAuth) {
+    if (authState.isAuthenticated && authState.isReadonlyAdmin) {
+      return '/readonly/accounts'
+    }
     if (
       authState.isAuthenticated &&
       (toPath === '/login' || toPath === '/register')
@@ -109,6 +117,14 @@ function simulateGuard(
     return '/login'
   }
 
+  if (authState.isReadonlyAdmin && !requiresReadonlyAccess) {
+    return '/readonly/accounts'
+  }
+
+  if (requiresReadonlyAccess && !authState.isReadonlyAdmin && !authState.isAdmin) {
+    return '/dashboard'
+  }
+
   // 需要管理员但不是管理员
   if (requiresAdmin && !authState.isAdmin) {
     return '/dashboard'
@@ -130,7 +146,10 @@ function simulateGuard(
 
   // Backend mode: admin gets full access, non-admin blocked
   if (authState.backendModeEnabled) {
-    if (authState.isAuthenticated && authState.isAdmin) {
+    if (
+      authState.isAuthenticated &&
+      (authState.isAdmin || (authState.isReadonlyAdmin && requiresReadonlyAccess))
+    ) {
       return null
     }
     const allowed = ['/login', '/key-usage', '/setup', '/payment/result']
@@ -252,6 +271,53 @@ describe('路由守卫逻辑', () => {
     it('访问用户页面允许通过', () => {
       const redirect = simulateGuard('/dashboard', {}, authState)
       expect(redirect).toBeNull()
+    })
+  })
+
+  describe('已认证只读管理员', () => {
+    const authState: MockAuthState = {
+      isAuthenticated: true,
+      isAdmin: false,
+      isReadonlyAdmin: true,
+      isSimpleMode: false,
+      backendModeEnabled: false,
+      hasPendingAuthSession: false,
+    }
+
+    it('只允许进入专用账号和分组页面', () => {
+      expect(
+        simulateGuard('/readonly/accounts', { requiresReadonlyAccess: true }, authState)
+      ).toBeNull()
+      expect(
+        simulateGuard('/readonly/groups', { requiresReadonlyAccess: true }, authState)
+      ).toBeNull()
+    })
+
+    it('直接输入管理、API Key、用量和公开页面都会回到只读账号页', () => {
+      expect(simulateGuard('/admin/accounts', { requiresAdmin: true }, authState)).toBe(
+        '/readonly/accounts'
+      )
+      expect(simulateGuard('/keys', {}, authState)).toBe('/readonly/accounts')
+      expect(simulateGuard('/usage', {}, authState)).toBe('/readonly/accounts')
+      expect(simulateGuard('/home', { requiresAuth: false }, authState)).toBe(
+        '/readonly/accounts'
+      )
+    })
+
+    it('初始化完成后从 setup 进入只读账号页', () => {
+      expect(
+        simulateGuard('/setup', { requiresAuth: false }, { ...authState, setupNeedsSetup: false })
+      ).toBe('/readonly/accounts')
+    })
+
+    it('backend mode 下仍可访问专用页面', () => {
+      expect(
+        simulateGuard(
+          '/readonly/accounts',
+          { requiresReadonlyAccess: true },
+          { ...authState, backendModeEnabled: true }
+        )
+      ).toBeNull()
     })
   })
 

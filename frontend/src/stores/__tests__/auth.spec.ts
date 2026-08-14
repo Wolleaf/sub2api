@@ -43,6 +43,14 @@ const fakeAdminUser = {
   role: 'admin' as const,
 }
 
+const fakeReadonlyUser = {
+  ...fakeUser,
+  id: 3,
+  username: 'readonly',
+  email: 'readonly@example.com',
+  role: 'readonly' as const,
+}
+
 const fakeAuthResponse = {
   access_token: 'test-token-123',
   refresh_token: 'refresh-token-456',
@@ -339,6 +347,27 @@ describe('useAuthStore', () => {
     it('未登录时返回 false', () => {
       const store = useAuthStore()
       expect(store.isAdmin).toBe(false)
+    })
+  })
+
+  describe('isReadonlyAdmin', () => {
+    it('只读管理员用户返回 true，且不被视为全量管理员', async () => {
+      mockLogin.mockResolvedValue({ ...fakeAuthResponse, user: { ...fakeReadonlyUser } })
+      const store = useAuthStore()
+
+      await store.login({ email: 'readonly@example.com', password: '123456' })
+
+      expect(store.isReadonlyAdmin).toBe(true)
+      expect(store.isAdmin).toBe(false)
+    })
+
+    it('普通用户和未登录状态返回 false', async () => {
+      const store = useAuthStore()
+      expect(store.isReadonlyAdmin).toBe(false)
+
+      mockLogin.mockResolvedValue(fakeAuthResponse)
+      await store.login({ email: 'test@example.com', password: '123456' })
+      expect(store.isReadonlyAdmin).toBe(false)
     })
   })
 

@@ -42,6 +42,22 @@ describe('AppSidebar scroll position persistence', () => {
   })
 })
 
+describe('AppSidebar scoped readonly navigation', () => {
+  it('uses an isolated navigation branch with only accounts and groups', () => {
+    expect(componentSource).toContain('<template v-if="isReadonlyAdmin">')
+    expect(componentSource).toContain('v-for="item in readonlyNavItems"')
+    expect(componentSource).toContain("{ path: '/readonly/accounts'")
+    expect(componentSource).toContain("{ path: '/readonly/groups'")
+  })
+
+  it('renders logout separately and skips privileged batch-image probing', () => {
+    expect(componentSource).toContain('v-if="isReadonlyAdmin"')
+    expect(componentSource).toContain('@click="handleLogout"')
+    expect(componentSource).toContain('if (!isReadonlyAdmin.value) {')
+    expect(componentSource).toContain('void refreshBatchImageAccess()')
+  })
+})
+
 describe('AppSidebar header styles', () => {
   it('does not clip the version badge dropdown', () => {
     const sidebarHeaderBlockMatch = styleSource.match(/\.sidebar-header\s*\{[\s\S]*?\n {2}\}/)
