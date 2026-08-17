@@ -302,7 +302,7 @@ func TestCalculateOpenAIRecordUsageCost_OAuthFastDoesNotScaleSearchSurcharge(t *
 		1,
 		tokens,
 		"priority",
-		false,
+		boolPtr(false),
 	)
 
 	require.NoError(t, err)
