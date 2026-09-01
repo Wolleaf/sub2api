@@ -3,9 +3,9 @@ name: Custom OAuth Fast image
 on:
   push:
     branches:
-      - feat/readonly-scoped-admin-v0.1.177
+      - feat/readonly-scoped-admin-v0.1.185
     tags:
-      - custom-v0.1.177-oauth-fast.*
+      - custom-v0.1.185-oauth-fast.*
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/wolleaf/sub2api
-  CUSTOM_VERSION: 0.1.177-oauth-fast.4
+  CUSTOM_VERSION: 0.1.185-oauth-fast.5
 
 jobs:
   build:

@@ -95,11 +95,25 @@
 
         <!-- 公开分组区域 -->
         <div v-if="publicGroups.length > 0">
-          <div class="mb-3 flex items-center gap-2">
+          <div class="mb-3 flex flex-wrap items-center gap-2">
             <div class="h-1.5 w-1.5 rounded-full bg-green-500"></div>
-            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ t('admin.users.publicGroups') }}</h4>
-            <span class="text-xs text-gray-400">({{ isReadonly ? publicGroupConfigs.filter(c => c.isSelected).length + '/' : '' }}{{ publicGroupConfigs.length }})</span>
+            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {{ !isReadonly && restrictPublicGroups ? t('admin.users.publicGroupsRestricted') : t('admin.users.publicGroups') }}
+            </h4>
+            <span class="text-xs text-gray-400">
+              ({{ isReadonly ? `${publicGroupConfigs.filter((c) => c.isSelected).length}/${publicGroupConfigs.length}` : publicGroupConfigs.length }})
+            </span>
+            <label v-if="!isReadonly" class="ml-auto flex cursor-pointer items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <input
+                type="checkbox"
+                :checked="restrictPublicGroups"
+                @change="toggleRestrictPublicGroups"
+                class="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-500"
+              />
+              {{ t('admin.users.restrictPublicGroups') }}
+            </label>
           </div>
+          <p v-if="!isReadonly" class="mb-3 text-xs text-gray-500 dark:text-gray-400">{{ t('admin.users.restrictPublicGroupsHint') }}</p>
           <div class="grid gap-3">
             <div
               v-for="config in publicGroupConfigs"
@@ -107,22 +121,19 @@
               class="relative overflow-hidden rounded-xl border-2 border-green-200 bg-green-50/50 p-4 dark:border-green-800/50 dark:bg-green-900/10"
             >
               <div class="flex items-center gap-4">
-                <!-- 只读管理员按 allowed_groups 精确授权；普通用户公开分组仍默认可用 -->
+                <!-- 只读管理员按 allowed_groups 精确授权；普通用户仅在开启限制后可逐项选择公开分组。 -->
                 <div class="flex-shrink-0">
-                  <label v-if="isReadonly" class="relative flex h-6 w-6 cursor-pointer items-center justify-center">
-                    <input
-                      type="checkbox"
-                      :checked="config.isSelected"
-                      @change="toggleExclusiveGroup(config.groupId)"
-                      class="peer sr-only"
-                    />
-                    <div class="h-5 w-5 rounded-md border-2 border-gray-300 transition-all peer-checked:border-primary-500 peer-checked:bg-primary-500 dark:border-dark-500 peer-checked:dark:border-primary-500">
-                      <svg v-if="config.isSelected" class="h-full w-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  </label>
-                  <div v-else class="flex h-5 w-5 items-center justify-center rounded-md border-2 border-green-400 bg-green-500 dark:border-green-600 dark:bg-green-600">
+                  <input
+                    v-if="isReadonly || restrictPublicGroups"
+                    type="checkbox"
+                    :checked="config.isSelected"
+                    @change="togglePublicGroup(config.groupId)"
+                    class="h-5 w-5 cursor-pointer rounded-md border-2 border-green-400 text-green-600 focus:ring-green-500 dark:border-green-600"
+                  />
+                  <div
+                    v-else
+                    class="flex h-5 w-5 items-center justify-center rounded-md border-2 border-green-400 bg-green-500 dark:border-green-600 dark:bg-green-600"
+                  >
                     <svg class="h-full w-full text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -221,6 +232,7 @@ const originalGroupRates = ref<Record<number, number>>({}) // 记录原始专属
 const loading = ref(false)
 const submitting = ref(false)
 const isReadonly = computed(() => props.user?.role === 'readonly')
+const restrictPublicGroups = ref(false)
 
 // 分离专属分组和公开分组
 const exclusiveGroups = computed(() => groups.value.filter((g) => g.is_exclusive))
@@ -251,6 +263,7 @@ const load = async () => {
     // 初始化配置
     const userAllowedGroups = props.user?.allowed_groups || []
     const userGroupRates = props.user?.group_rates || {}
+    restrictPublicGroups.value = props.user?.restrict_public_groups ?? false
 
     // 保存原始专属倍率，用于检测删除操作
     originalGroupRates.value = { ...userGroupRates }
@@ -263,8 +276,11 @@ const load = async () => {
       defaultRate: g.rate_multiplier,
       customRate: userGroupRates[g.id] ?? null,
       // 只读管理员：所有类型都按 allowed_groups 精确选择。
-      // 普通用户：专属分组检查 allowed_groups，公开分组始终可用。
-      isSelected: isReadonly.value ? userAllowedGroups.includes(g.id) : (g.is_exclusive ? userAllowedGroups.includes(g.id) : true),
+      // 普通用户：专属分组以及受限公开分组检查 allowed_groups；未受限公开分组恒可用。
+      isSelected:
+        isReadonly.value || g.is_exclusive || restrictPublicGroups.value
+          ? userAllowedGroups.includes(g.id)
+          : true,
     }))
   } catch (error) {
     console.error('Failed to load groups:', error)
@@ -277,6 +293,23 @@ const toggleExclusiveGroup = (groupId: number) => {
   const config = groupConfigs.value.find((c) => c.groupId === groupId)
   if (config && (config.isExclusive || isReadonly.value)) {
     config.isSelected = !config.isSelected
+  }
+}
+
+const togglePublicGroup = (groupId: number) => {
+  const config = groupConfigs.value.find((c) => c.groupId === groupId)
+  if (config && !config.isExclusive) {
+    config.isSelected = !config.isSelected
+  }
+}
+
+// 关闭限制时把公开分组全部勾回，避免保存出一份"限制已关但只勾了两个"的误导状态。
+const toggleRestrictPublicGroups = () => {
+  restrictPublicGroups.value = !restrictPublicGroups.value
+  if (!restrictPublicGroups.value) {
+    for (const config of groupConfigs.value) {
+      if (!config.isExclusive) config.isSelected = true
+    }
   }
 }
 
@@ -297,9 +330,10 @@ const handleSave = async () => {
   submitting.value = true
 
   try {
-    // 只读管理员精确保存所有已选分组；普通用户仍只保存专属分组。
+    // 只读管理员精确保存所有已选分组；普通用户保存专属分组及受限公开分组。
+    // 未开启限制时不写入公开分组，保持该表“额外授予”的原有语义。
     const allowedGroups = groupConfigs.value
-      .filter((c) => c.isSelected && (isReadonly.value || c.isExclusive))
+      .filter((c) => c.isSelected && (isReadonly.value || c.isExclusive || restrictPublicGroups.value))
       .map((c) => c.groupId)
 
     // 构建 group_rates
@@ -320,6 +354,9 @@ const handleSave = async () => {
 
     await adminAPI.users.update(props.user.id, {
       allowed_groups: allowedGroups,
+      restrict_public_groups: isReadonly.value
+        ? (props.user.restrict_public_groups ?? false)
+        : restrictPublicGroups.value,
       group_rates: Object.keys(groupRates).length > 0 ? groupRates : undefined,
     })
 

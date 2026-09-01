@@ -125,6 +125,23 @@ func TestOpenAIGatewayServiceRecordUsage_OAuthFastScalesAllTokenComponentsAndLon
 		&openAIRecordUsageSubRepoStub{},
 		nil,
 	)
+	// v0.1.185 keeps long-context tiers in the model catalog instead of the
+	// static fallback card, matching the production pricing path.
+	cfg := &config.Config{}
+	cfg.Default.RateMultiplier = 1.1
+	svc.billingService = NewBillingService(cfg, newStubPricingServiceFromJSON(t, `{
+		"gpt-5.6-sol": {
+			"litellm_provider": "openai",
+			"mode": "chat",
+			"input_cost_per_token": 5e-06,
+			"output_cost_per_token": 3e-05,
+			"cache_read_input_token_cost": 5e-07,
+			"cache_creation_input_token_cost": 6.25e-06,
+			"long_context_input_token_threshold": 272000,
+			"long_context_input_cost_multiplier": 2.0,
+			"long_context_output_cost_multiplier": 1.5
+		}
+	}`))
 	serviceTier := "priority"
 	usage := OpenAIUsage{
 		InputTokens:              300500,
@@ -303,6 +320,7 @@ func TestCalculateOpenAIRecordUsageCost_OAuthFastDoesNotScaleSearchSurcharge(t *
 		tokens,
 		"priority",
 		boolPtr(false),
+		time.Time{},
 	)
 
 	require.NoError(t, err)
