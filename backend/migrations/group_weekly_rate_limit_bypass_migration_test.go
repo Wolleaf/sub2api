@@ -28,6 +28,21 @@ func TestMigration232ExtendsDurableAuthCacheInvalidation(t *testing.T) {
 	require.Contains(t, sql, "CREATE OR REPLACE FUNCTION enqueue_group_auth_cache_invalidation")
 	require.Contains(t, sql, "OLD.weekly_rate_limit_bypass_enabled IS NOT DISTINCT FROM NEW.weekly_rate_limit_bypass_enabled")
 	require.Contains(t, sql, "OLD.weekly_rate_limit_bypass_window_start IS NOT DISTINCT FROM NEW.weekly_rate_limit_bypass_window_start")
+	for _, existingField := range []string{
+		"allow_image_generation",
+		"platform",
+		"subscription_type",
+		"rate_multiplier",
+		"peak_rate_enabled",
+		"peak_start",
+		"peak_end",
+		"peak_rate_multiplier",
+		"profit_control_enabled",
+		"profit_min_margin",
+		"profit_safety_buffer",
+	} {
+		require.Contains(t, sql, "OLD."+existingField+" IS NOT DISTINCT FROM NEW."+existingField)
+	}
 	require.Contains(t, sql, "encode(sha256(convert_to(k.key, 'UTF8')), 'hex')")
 	require.NotContains(t, sql, "INSERT INTO auth_cache_invalidation_outbox (raw_key)")
 }
