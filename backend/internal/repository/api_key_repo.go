@@ -181,6 +181,8 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 				group.FieldDailyLimitUsd,
 				group.FieldWeeklyLimitUsd,
 				group.FieldMonthlyLimitUsd,
+				group.FieldWeeklyRateLimitBypassEnabled,
+				group.FieldWeeklyRateLimitBypassWindowStart,
 				group.FieldAllowImageGeneration,
 				group.FieldAllowBatchImageGeneration,
 				group.FieldImageRateIndependent,

@@ -14,7 +14,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/wolleaf/sub2api
-  CUSTOM_VERSION: 0.1.185-oauth-fast.6
+  CUSTOM_VERSION: 0.1.185-oauth-fast.7
 
 jobs:
   build:

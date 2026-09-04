@@ -188,6 +188,17 @@ func TestOpenAIWeeklyResetSyncReconcilesFromImmutableUsageLogs(t *testing.T) {
 	require.True(t, bypassStart.Equal(targetStart))
 	require.Equal(t, float64(450), rate7d)
 
+	// The gateway authenticates through a deliberately narrow group projection.
+	// Keep the persisted bypass state in that projection or a cache refresh will
+	// silently restore the default disabled value on live requests.
+	authKey, err := NewAPIKeyRepository(integrationEntClient, integrationDB).GetByKeyForAuth(ctx, "sk-"+name)
+	require.NoError(t, err)
+	require.NotNil(t, authKey.Group)
+	require.True(t, authKey.Group.WeeklyRateLimitBypassEnabled)
+	require.NotNil(t, authKey.Group.WeeklyRateLimitBypassWindowStart)
+	require.True(t, authKey.Group.WeeklyRateLimitBypassWindowStart.Equal(targetStart))
+	require.Zero(t, authKey.EffectiveRateLimit7d())
+
 	result, err = repo.ReconcileWeeklyWindow(ctx, accountID, targetStart.Add(2*time.Second), false)
 	require.NoError(t, err)
 	require.Zero(t, result.UpdatedAPIKeys)
