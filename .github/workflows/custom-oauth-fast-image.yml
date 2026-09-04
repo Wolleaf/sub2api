@@ -3,7 +3,7 @@ name: Custom OAuth Fast image
 on:
   push:
     branches:
-      - feat/readonly-scoped-admin-v0.1.185
+      - feat/one-click-weekly-bypass-v0.1.185
     tags:
       - custom-v0.1.185-oauth-fast.*
   workflow_dispatch:
@@ -14,7 +14,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/wolleaf/sub2api
-  CUSTOM_VERSION: 0.1.185-oauth-fast.5
+  CUSTOM_VERSION: 0.1.185-oauth-fast.6
 
 jobs:
   build:
@@ -57,6 +57,6 @@ jobs:
             VERSION=${{ env.CUSTOM_VERSION }}
             COMMIT=${{ github.sha }}
             DATE=${{ steps.metadata.outputs.date }}
-          cache-from: type=gha,scope=custom-oauth-fast-readonly-admin-amd64
-          cache-to: type=gha,mode=max,scope=custom-oauth-fast-readonly-admin-amd64
+          cache-from: type=gha,scope=custom-oauth-fast-weekly-bypass-amd64
+          cache-to: type=gha,mode=max,scope=custom-oauth-fast-weekly-bypass-amd64
           provenance: mode=max

@@ -92,6 +92,268 @@ func (r *openAIWeeklyResetSyncRepository) ListCandidates(ctx context.Context) (*
 	return result, nil
 }
 
+func (r *openAIWeeklyResetSyncRepository) GetWeeklyRateLimitBypassCandidate(ctx context.Context, groupID int64) (*service.OpenAIWeeklyRateLimitBypassCandidate, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("openai weekly reset sync repository db is nil")
+	}
+	var platform, status string
+	var enabled bool
+	var windowStart sql.NullTime
+	err := r.db.QueryRowContext(ctx, `
+		SELECT platform, status, weekly_rate_limit_bypass_enabled, weekly_rate_limit_bypass_window_start
+		FROM groups
+		WHERE id = $1 AND deleted_at IS NULL
+	`, groupID).Scan(&platform, &status, &enabled, &windowStart)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, service.ErrGroupNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if platform != service.PlatformOpenAI || status != service.StatusActive {
+		return nil, service.ErrOpenAIWeeklyBypassUnsafeTopology
+	}
+
+	topology, err := r.openAIWeeklyResetGroupTopologyRead(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	accountID, _, ok := classifyOpenAIWeeklyResetTopology(topology)
+	if !ok {
+		return nil, service.ErrOpenAIWeeklyBypassUnsafeTopology
+	}
+	affected, err := countWeeklyLimitedAPIKeys(ctx, r.db, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if affected == 0 {
+		return nil, service.ErrOpenAIWeeklyBypassNoLimitedKeys
+	}
+	return &service.OpenAIWeeklyRateLimitBypassCandidate{
+		GroupID:             groupID,
+		AccountID:           accountID,
+		AffectedAPIKeyCount: affected,
+		Enabled:             enabled,
+		WindowStart:         nullTimePointer(windowStart),
+	}, nil
+}
+
+func (r *openAIWeeklyResetSyncRepository) SetWeeklyRateLimitBypass(
+	ctx context.Context,
+	groupID, accountID int64,
+	enabled bool,
+	windowStart *time.Time,
+) (_ *service.OpenAIWeeklyRateLimitBypassStatus, err error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("openai weekly reset sync repository db is nil")
+	}
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if tx != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if enabled {
+		eligible, lockErr := lockEligibleOpenAIWeeklyResetAccount(ctx, tx, accountID)
+		if lockErr != nil {
+			return nil, lockErr
+		}
+		if !eligible {
+			return nil, service.ErrOpenAIWeeklyBypassUnsafeTopology
+		}
+	}
+
+	var platform, groupStatus string
+	var currentEnabled bool
+	var currentWindow sql.NullTime
+	err = tx.QueryRowContext(ctx, `
+		SELECT platform, status, weekly_rate_limit_bypass_enabled, weekly_rate_limit_bypass_window_start
+		FROM groups
+		WHERE id = $1 AND deleted_at IS NULL
+		FOR UPDATE
+	`, groupID).Scan(&platform, &groupStatus, &currentEnabled, &currentWindow)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, service.ErrGroupNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	affected, err := countWeeklyLimitedAPIKeys(ctx, tx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if enabled {
+		if platform != service.PlatformOpenAI || groupStatus != service.StatusActive || windowStart == nil || windowStart.IsZero() {
+			return nil, service.ErrOpenAIWeeklyBypassUnsafeTopology
+		}
+		topology, topologyErr := openAIWeeklyResetGroupTopology(ctx, tx, groupID)
+		if topologyErr != nil {
+			return nil, topologyErr
+		}
+		topologyAccountID, _, ok := classifyOpenAIWeeklyResetTopology(topology)
+		if !ok || topologyAccountID != accountID {
+			return nil, service.ErrOpenAIWeeklyBypassUnsafeTopology
+		}
+		if affected == 0 {
+			return nil, service.ErrOpenAIWeeklyBypassNoLimitedKeys
+		}
+		canonical := windowStart.UTC().Truncate(time.Second)
+		currentStart := nullTimePointer(currentWindow)
+		if currentEnabled && currentStart != nil && service.OpenAIWeeklyWindowsEquivalent(*currentStart, canonical) {
+			if err := tx.Commit(); err != nil {
+				return nil, err
+			}
+			tx = nil
+			return weeklyBypassStatus(true, currentStart, affected, false), nil
+		}
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE groups
+			SET weekly_rate_limit_bypass_enabled = TRUE,
+				weekly_rate_limit_bypass_window_start = $1,
+				updated_at = NOW()
+			WHERE id = $2 AND deleted_at IS NULL
+		`, canonical, groupID); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		tx = nil
+		return weeklyBypassStatus(true, &canonical, affected, true), nil
+	}
+
+	changed := currentEnabled || currentWindow.Valid
+	if changed {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE groups
+			SET weekly_rate_limit_bypass_enabled = FALSE,
+				weekly_rate_limit_bypass_window_start = NULL,
+				updated_at = NOW()
+			WHERE id = $1 AND deleted_at IS NULL
+		`, groupID); err != nil {
+			return nil, err
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	tx = nil
+	return weeklyBypassStatus(false, nil, affected, changed), nil
+}
+
+func weeklyBypassStatus(enabled bool, windowStart *time.Time, affected int, changed bool) *service.OpenAIWeeklyRateLimitBypassStatus {
+	status := &service.OpenAIWeeklyRateLimitBypassStatus{
+		Enabled:             enabled,
+		WindowStart:         windowStart,
+		AffectedAPIKeyCount: affected,
+		Changed:             changed,
+	}
+	if enabled && windowStart != nil {
+		autoCloseAt := windowStart.Add(service.RateLimitWindow7d)
+		status.AutoCloseAt = &autoCloseAt
+	}
+	return status
+}
+
+func (r *openAIWeeklyResetSyncRepository) CloseExpiredOrUnsafeWeeklyRateLimitBypasses(ctx context.Context, now time.Time) ([]service.OpenAIWeeklyRateLimitBypassClosure, error) {
+	if r == nil || r.db == nil {
+		return nil, errors.New("openai weekly reset sync repository db is nil")
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		WITH candidates AS (
+			SELECT g.id,
+				CASE
+					WHEN g.weekly_rate_limit_bypass_window_start IS NULL THEN 'missing_window_start'
+					WHEN g.weekly_rate_limit_bypass_window_start + INTERVAL '7 days' <= $1 THEN 'deadline_reached'
+					WHEN g.deleted_at IS NOT NULL OR g.status <> $2 OR g.platform <> $3 THEN 'group_inactive_or_platform_changed'
+					WHEN (SELECT COUNT(*) FROM account_groups ag WHERE ag.group_id = g.id) <> 1 THEN 'multiple_or_mixed_accounts'
+					WHEN NOT EXISTS (
+						SELECT 1
+						FROM account_groups ag
+						JOIN accounts a ON a.id = ag.account_id
+						WHERE ag.group_id = g.id
+							AND a.deleted_at IS NULL
+							AND a.platform = $3
+							AND a.type = $4
+							AND a.status = $2
+							AND a.parent_account_id IS NULL
+					) THEN 'unsafe_account_topology'
+					ELSE NULL
+				END AS reason
+			FROM groups g
+			WHERE g.weekly_rate_limit_bypass_enabled = TRUE
+			FOR UPDATE SKIP LOCKED
+		), closed AS (
+			UPDATE groups g
+			SET weekly_rate_limit_bypass_enabled = FALSE,
+				weekly_rate_limit_bypass_window_start = NULL,
+				updated_at = NOW()
+			FROM candidates c
+			WHERE g.id = c.id AND c.reason IS NOT NULL
+			RETURNING g.id, c.reason
+		)
+		SELECT id, reason FROM closed ORDER BY id
+	`, now.UTC(), service.StatusActive, service.PlatformOpenAI, service.AccountTypeOAuth)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var result []service.OpenAIWeeklyRateLimitBypassClosure
+	for rows.Next() {
+		var item service.OpenAIWeeklyRateLimitBypassClosure
+		if err := rows.Scan(&item.GroupID, &item.Reason); err != nil {
+			return nil, err
+		}
+		result = append(result, item)
+	}
+	return result, rows.Err()
+}
+
+func (r *openAIWeeklyResetSyncRepository) openAIWeeklyResetGroupTopologyRead(ctx context.Context, groupID int64) ([]openAIWeeklyResetTopologyRow, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT ag.group_id, a.id, a.platform, a.type, a.status, a.parent_account_id, a.deleted_at
+		FROM account_groups ag
+		JOIN accounts a ON a.id = ag.account_id
+		WHERE ag.group_id = $1
+		ORDER BY a.id
+	`, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var topology []openAIWeeklyResetTopologyRow
+	for rows.Next() {
+		var row openAIWeeklyResetTopologyRow
+		if err := rows.Scan(&row.groupID, &row.accountID, &row.platform, &row.accountType, &row.status, &row.parentAccountID, &row.deletedAt); err != nil {
+			return nil, err
+		}
+		topology = append(topology, row)
+	}
+	return topology, rows.Err()
+}
+
+type weeklyLimitedAPIKeyCounter interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+func countWeeklyLimitedAPIKeys(ctx context.Context, queryer weeklyLimitedAPIKeyCounter, groupID int64) (int, error) {
+	var count int
+	err := queryer.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM api_keys
+		WHERE group_id = $1
+			AND deleted_at IS NULL
+			AND status = $2
+			AND rate_limit_7d > 0
+	`, groupID, service.StatusAPIKeyActive).Scan(&count)
+	return count, err
+}
+
 func (r *openAIWeeklyResetSyncRepository) ReconcileWeeklyWindow(
 	ctx context.Context,
 	accountID int64,
@@ -130,6 +392,10 @@ func (r *openAIWeeklyResetSyncRepository) ReconcileWeeklyWindow(
 		return nil, err
 	}
 	for _, groupID := range groupIDs {
+		bypassEnabled, bypassWindowStart, err := lockOpenAIWeeklyResetGroup(ctx, tx, groupID)
+		if err != nil {
+			return nil, err
+		}
 		topology, err := openAIWeeklyResetGroupTopology(ctx, tx, groupID)
 		if err != nil {
 			return nil, err
@@ -151,6 +417,18 @@ func (r *openAIWeeklyResetSyncRepository) ReconcileWeeklyWindow(
 		if err := r.reconcileAPIKeys(ctx, tx, groupID, windowStart, forceInvalidate, result); err != nil {
 			return nil, err
 		}
+		if bypassEnabled && bypassWindowStart != nil && !service.OpenAIWeeklyWindowsEquivalent(*bypassWindowStart, windowStart) {
+			if _, err := tx.ExecContext(ctx, `
+				UPDATE groups
+				SET weekly_rate_limit_bypass_enabled = FALSE,
+					weekly_rate_limit_bypass_window_start = NULL,
+					updated_at = NOW()
+				WHERE id = $1 AND deleted_at IS NULL
+			`, groupID); err != nil {
+				return nil, err
+			}
+			result.AuthCacheGroupIDs = append(result.AuthCacheGroupIDs, groupID)
+		}
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -158,6 +436,24 @@ func (r *openAIWeeklyResetSyncRepository) ReconcileWeeklyWindow(
 	}
 	tx = nil
 	return result, nil
+}
+
+func lockOpenAIWeeklyResetGroup(ctx context.Context, tx *sql.Tx, groupID int64) (bool, *time.Time, error) {
+	var enabled bool
+	var windowStart sql.NullTime
+	err := tx.QueryRowContext(ctx, `
+		SELECT weekly_rate_limit_bypass_enabled, weekly_rate_limit_bypass_window_start
+		FROM groups
+		WHERE id = $1 AND deleted_at IS NULL
+		FOR UPDATE
+	`, groupID).Scan(&enabled, &windowStart)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil, nil
+	}
+	if err != nil {
+		return false, nil, err
+	}
+	return enabled, nullTimePointer(windowStart), nil
 }
 
 func lockEligibleOpenAIWeeklyResetAccount(ctx context.Context, tx *sql.Tx, accountID int64) (bool, error) {
@@ -297,7 +593,7 @@ func (r *openAIWeeklyResetSyncRepository) reconcileAPIKeys(
 
 func (r *openAIWeeklyResetSyncRepository) reconcileAPIKey(ctx context.Context, tx *sql.Tx, key openAIWeeklyCounterRow, windowStart time.Time) (bool, error) {
 	currentStart := nullTimePointer(key.windowStart)
-	if currentStart != nil && currentStart.Equal(windowStart) {
+	if currentStart != nil && service.OpenAIWeeklyWindowsEquivalent(*currentStart, windowStart) {
 		return false, nil
 	}
 	historyCost, err := sumWeeklyResetUsage(ctx, tx, "api_key_id", key.id, currentStart, windowStart)
@@ -357,7 +653,7 @@ func (r *openAIWeeklyResetSyncRepository) reconcileSubscriptions(
 
 	for _, sub := range subscriptions {
 		currentStart := nullTimePointer(sub.windowStart)
-		changed := currentStart == nil || !currentStart.Equal(windowStart)
+		changed := currentStart == nil || !service.OpenAIWeeklyWindowsEquivalent(*currentStart, windowStart)
 		if changed {
 			historyCost, err := sumWeeklyResetUsage(ctx, tx, "subscription_id", sub.id, currentStart, windowStart)
 			if err != nil {

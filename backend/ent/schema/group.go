@@ -289,6 +289,16 @@ func (Group) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "decimal(10,4)"}).
 			Default(0).
 			Comment("安全缓冲，小数；与 margin 相加后从下游倍率中扣除，默认 0"),
+
+		// 管理员临时豁免本分组 API Key 的 7 天额度检查。原始额度与用量继续保留，
+		// 周窗口换代后由 OpenAIWeeklyResetSyncService 自动关闭。
+		field.Bool("weekly_rate_limit_bypass_enabled").
+			Default(false).
+			Comment("是否临时豁免本分组 API Key 的 7 天额度检查"),
+		field.Time("weekly_rate_limit_bypass_window_start").
+			Optional().
+			Nillable().
+			Comment("启用豁免时观测到的 OpenAI 上游周窗口起点"),
 	}
 }
 

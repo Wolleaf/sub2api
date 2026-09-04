@@ -161,4 +161,51 @@ func TestOpenAIWeeklyResetSyncReconcilesFromImmutableUsageLogs(t *testing.T) {
 	require.Zero(t, result.UpdatedSubscriptions)
 	require.Equal(t, []int64{keyID}, result.APIKeyIDs)
 	require.Equal(t, []service.OpenAIWeeklyResetSubscriptionCacheTarget{{UserID: userID, GroupID: groupID}}, result.SubscriptionCaches)
+
+	// Enabling the temporary bypass does not overwrite the configured $450
+	// policy. Small upstream reset_at drift keeps both counters and the bypass
+	// untouched; a genuinely new weekly window reconciles counters and closes it
+	// in the same serializable transaction.
+	candidate, err := repo.GetWeeklyRateLimitBypassCandidate(ctx, groupID)
+	require.NoError(t, err)
+	require.Equal(t, accountID, candidate.AccountID)
+	require.Equal(t, 1, candidate.AffectedAPIKeyCount)
+
+	status, err := repo.SetWeeklyRateLimitBypass(ctx, groupID, accountID, true, &targetStart)
+	require.NoError(t, err)
+	require.True(t, status.Enabled)
+	require.True(t, status.Changed)
+
+	var bypassEnabled bool
+	var bypassStart time.Time
+	require.NoError(t, integrationDB.QueryRowContext(ctx, `
+		SELECT weekly_rate_limit_bypass_enabled, weekly_rate_limit_bypass_window_start, rate_limit_7d::float8
+		FROM groups g
+		JOIN api_keys k ON k.group_id = g.id
+		WHERE g.id = $1 AND k.id = $2
+	`, groupID, keyID).Scan(&bypassEnabled, &bypassStart, &rate7d))
+	require.True(t, bypassEnabled)
+	require.True(t, bypassStart.Equal(targetStart))
+	require.Equal(t, float64(450), rate7d)
+
+	result, err = repo.ReconcileWeeklyWindow(ctx, accountID, targetStart.Add(2*time.Second), false)
+	require.NoError(t, err)
+	require.Zero(t, result.UpdatedAPIKeys)
+	require.Zero(t, result.UpdatedSubscriptions)
+	require.Empty(t, result.AuthCacheGroupIDs)
+	require.NoError(t, integrationDB.QueryRowContext(ctx, `SELECT weekly_rate_limit_bypass_enabled FROM groups WHERE id = $1`, groupID).Scan(&bypassEnabled))
+	require.True(t, bypassEnabled)
+
+	newWeekStart := targetStart.Add(24 * time.Hour)
+	result, err = repo.ReconcileWeeklyWindow(ctx, accountID, newWeekStart, false)
+	require.NoError(t, err)
+	require.Equal(t, []int64{groupID}, result.AuthCacheGroupIDs)
+	require.NoError(t, integrationDB.QueryRowContext(ctx, `
+		SELECT weekly_rate_limit_bypass_enabled, rate_limit_7d::float8
+		FROM groups g
+		JOIN api_keys k ON k.group_id = g.id
+		WHERE g.id = $1 AND k.id = $2
+	`, groupID, keyID).Scan(&bypassEnabled, &rate7d))
+	require.False(t, bypassEnabled)
+	require.Equal(t, float64(450), rate7d)
 }

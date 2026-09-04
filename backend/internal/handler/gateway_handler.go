@@ -1564,7 +1564,7 @@ func (h *GatewayHandler) Usage(c *gin.Context) {
 	}
 
 	// 判断模式: key 有总额度或速率限制 → quota_limited，否则 → unrestricted
-	isQuotaLimited := apiKey.Quota > 0 || apiKey.HasRateLimits()
+	isQuotaLimited := apiKey.Quota > 0 || apiKey.HasEnforcedRateLimits()
 
 	if isQuotaLimited {
 		h.usageQuotaLimited(c, ctx, apiKey, usageData, dailyUsage, modelStats)
@@ -1663,7 +1663,7 @@ func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, 
 	}
 
 	// 速率限制信息（从 DB 获取实时用量）
-	if apiKey.HasRateLimits() && h.apiKeyService != nil {
+	if apiKey.HasEnforcedRateLimits() && h.apiKeyService != nil {
 		rateLimitData, err := h.apiKeyService.GetRateLimitData(ctx, apiKey.ID)
 		if err == nil && rateLimitData != nil {
 			var rateLimits []gin.H
@@ -1695,13 +1695,13 @@ func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, 
 				}
 				rateLimits = append(rateLimits, entry)
 			}
-			if apiKey.RateLimit7d > 0 {
+			if limit7d := apiKey.EffectiveRateLimit7d(); limit7d > 0 {
 				used := rateLimitData.EffectiveUsage7d()
 				entry := gin.H{
 					"window":       "7d",
-					"limit":        apiKey.RateLimit7d,
+					"limit":        limit7d,
 					"used":         used,
-					"remaining":    max(0, apiKey.RateLimit7d-used),
+					"remaining":    max(0, limit7d-used),
 					"window_start": rateLimitData.Window7dStart,
 				}
 				if rateLimitData.Window7dStart != nil && !service.IsWindowExpired(rateLimitData.Window7dStart, service.RateLimitWindow7d) {

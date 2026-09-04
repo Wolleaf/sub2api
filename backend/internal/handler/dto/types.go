@@ -192,6 +192,11 @@ type AdminGroup struct {
 	ActiveAccountCount      int64          `json:"active_account_count,omitempty"`
 	RateLimitedAccountCount int64          `json:"rate_limited_account_count,omitempty"`
 
+	// 管理员专用：临时豁免本分组 API Key 的 7 天额度检查。
+	WeeklyRateLimitBypassEnabled     bool       `json:"weekly_rate_limit_bypass_enabled"`
+	WeeklyRateLimitBypassWindowStart *time.Time `json:"weekly_rate_limit_bypass_window_start,omitempty"`
+	WeeklyRateLimitBypassAutoCloseAt *time.Time `json:"weekly_rate_limit_bypass_auto_close_at,omitempty"`
+
 	// 分组排序
 	SortOrder int `json:"sort_order"`
 }

@@ -604,6 +604,7 @@ func (h *OpenAIOAuthHandler) ResetQuota(c *gin.Context) {
 		h.rateLimitService,
 		h.adminService.GetAccount,
 	)
+	service.NotifyOpenAIWeeklyResetObservation(accountID, postResult.Quota)
 	resetResponse.Quota = postResult.Quota
 	resetResponse.CacheRefreshed = postResult.CacheRefreshed
 	resetResponse.AccountStateRecovered = postResult.AccountStateRecovered

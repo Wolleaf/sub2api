@@ -13,6 +13,8 @@ const {
   getUsageSummary,
   getCapacitySummary,
   getLiveCapability,
+  getWeeklyRateLimitBypass,
+  updateWeeklyRateLimitBypass,
   showSuccess,
   showError
 } = vi.hoisted(() => ({
@@ -23,6 +25,8 @@ const {
   getUsageSummary: vi.fn(),
   getCapacitySummary: vi.fn(),
   getLiveCapability: vi.fn(),
+  getWeeklyRateLimitBypass: vi.fn(),
+  updateWeeklyRateLimitBypass: vi.fn(),
   showSuccess: vi.fn(),
   showError: vi.fn()
 }))
@@ -36,6 +40,8 @@ vi.mock('@/api/admin', () => ({
       getUsageSummary,
       getCapacitySummary,
       getLiveCapability,
+      getWeeklyRateLimitBypass,
+      updateWeeklyRateLimitBypass,
       getAll: vi.fn(),
       create: vi.fn(),
       update: updateGroup,
@@ -117,6 +123,9 @@ const sourceGroup: AdminGroup = {
   account_count: 1,
   active_account_count: 1,
   rate_limited_account_count: 0,
+  weekly_rate_limit_bypass_enabled: false,
+  weekly_rate_limit_bypass_window_start: null,
+  weekly_rate_limit_bypass_auto_close_at: null,
   models_list_config: undefined,
   sort_order: 10
 }
@@ -145,6 +154,14 @@ const BaseDialogStub = defineComponent({
   template: '<div v-if="show"><slot /><slot name="footer" /></div>'
 })
 
+const ConfirmDialogStub = defineComponent({
+  props: {
+    show: { type: Boolean, default: false }
+  },
+  emits: ['confirm', 'cancel'],
+  template: '<button v-if="show" data-testid="confirm-dialog-confirm" @click="$emit(\'confirm\')">confirm</button>'
+})
+
 function mountView() {
   return mount(GroupsView, {
     global: {
@@ -154,7 +171,7 @@ function mountView() {
         DataTable: DataTableStub,
         Pagination: true,
         BaseDialog: BaseDialogStub,
-        ConfirmDialog: true,
+        ConfirmDialog: ConfirmDialogStub,
         EmptyState: true,
         Select: true,
         PlatformIcon: true,
@@ -180,6 +197,8 @@ describe('GroupsView duplicate action', () => {
       getUsageSummary,
       getCapacitySummary,
       getLiveCapability,
+      getWeeklyRateLimitBypass,
+      updateWeeklyRateLimitBypass,
       showSuccess,
       showError
     ]) {
@@ -203,6 +222,18 @@ describe('GroupsView duplicate action', () => {
     getUsageSummary.mockResolvedValue([])
     getCapacitySummary.mockResolvedValue([])
     getLiveCapability.mockResolvedValue({ supported: false })
+    getWeeklyRateLimitBypass.mockResolvedValue({
+      enabled: false,
+      window_start: '2026-09-01T00:00:00Z',
+      auto_close_at: '2026-09-08T00:00:00Z',
+      affected_api_key_count: 3
+    })
+    updateWeeklyRateLimitBypass.mockResolvedValue({
+      enabled: true,
+      window_start: '2026-09-01T00:00:00Z',
+      auto_close_at: '2026-09-08T00:00:00Z',
+      affected_api_key_count: 3
+    })
   })
 
   afterEach(() => {
@@ -243,6 +274,22 @@ describe('GroupsView duplicate action', () => {
     resolveDuplicate({ ...sourceGroup, id: 43, name: 'Primary (Copy)', status: 'inactive' })
     await flushPromises()
     expect(wrapper.get('[data-testid="group-duplicate"]').attributes('disabled')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('previews and enables the weekly API-key bypass without exposing key data', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+
+    await wrapper.get('[data-testid="weekly-rate-limit-bypass-toggle"]').trigger('click')
+    await flushPromises()
+    expect(getWeeklyRateLimitBypass).toHaveBeenCalledWith(42)
+
+    await wrapper.get('[data-testid="confirm-dialog-confirm"]').trigger('click')
+    await flushPromises()
+
+    expect(updateWeeklyRateLimitBypass).toHaveBeenCalledWith(42, true)
+    expect(showSuccess).toHaveBeenCalled()
     wrapper.unmount()
   })
 

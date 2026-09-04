@@ -681,7 +681,7 @@ func (s *BillingCacheService) evaluateRateLimits(ctx context.Context, apiKey *AP
 	if apiKey.RateLimit1d > 0 && usage1d >= apiKey.RateLimit1d {
 		return ErrAPIKeyRateLimit1dExceeded
 	}
-	if apiKey.RateLimit7d > 0 && usage7d >= apiKey.RateLimit7d {
+	if limit7d := apiKey.EffectiveRateLimit7d(); limit7d > 0 && usage7d >= limit7d {
 		return ErrAPIKeyRateLimit7dExceeded
 	}
 	return nil
@@ -762,7 +762,7 @@ func (s *BillingCacheService) CheckBillingEligibility(ctx context.Context, user 
 	}
 
 	// Check API Key rate limits (applies to both billing modes)
-	if apiKey != nil && apiKey.HasRateLimits() {
+	if apiKey != nil && apiKey.HasEnforcedRateLimits() {
 		if err := s.checkAPIKeyRateLimits(ctx, apiKey); err != nil {
 			return err
 		}

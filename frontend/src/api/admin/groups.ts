@@ -21,6 +21,31 @@ export interface LiveCapability {
   reason?: string
 }
 
+export interface WeeklyRateLimitBypassStatus {
+  enabled: boolean
+  window_start?: string | null
+  auto_close_at?: string | null
+  affected_api_key_count: number
+}
+
+export async function getWeeklyRateLimitBypass(id: number): Promise<WeeklyRateLimitBypassStatus> {
+  const { data } = await apiClient.get<WeeklyRateLimitBypassStatus>(
+    `/admin/groups/${id}/weekly-rate-limit-bypass`
+  )
+  return data
+}
+
+export async function updateWeeklyRateLimitBypass(
+  id: number,
+  enabled: boolean
+): Promise<WeeklyRateLimitBypassStatus> {
+  const { data } = await apiClient.put<WeeklyRateLimitBypassStatus>(
+    `/admin/groups/${id}/weekly-rate-limit-bypass`,
+    { enabled }
+  )
+  return data
+}
+
 /**
  * List all groups with pagination
  * @param page - Page number (default: 1)
@@ -476,6 +501,8 @@ export const groupsAPI = {
   getByPlatform,
   getAllIncludingInactive,
   getLiveCapability,
+  getWeeklyRateLimitBypass,
+  updateWeeklyRateLimitBypass,
   getById,
   getModelsListCandidates,
   create,

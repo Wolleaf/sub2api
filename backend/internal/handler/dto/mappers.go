@@ -147,22 +147,28 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 		return nil
 	}
 	out := &AdminGroup{
-		Group:                       groupFromServiceBase(g),
-		ProfitControlEnabled:        g.ProfitControlEnabled,
-		ProfitMinMargin:             g.ProfitMinMargin,
-		ProfitSafetyBuffer:          g.ProfitSafetyBuffer,
-		ModelPricing:                g.ModelPricing,
-		ModelRouting:                g.ModelRouting,
-		ModelRoutingEnabled:         g.ModelRoutingEnabled,
-		MCPXMLInject:                g.MCPXMLInject,
-		DefaultMappedModel:          g.DefaultMappedModel,
-		MessagesDispatchModelConfig: g.MessagesDispatchModelConfig,
-		ModelsListConfig:            g.ModelsListConfig,
-		SupportedModelScopes:        g.SupportedModelScopes,
-		AccountCount:                g.AccountCount,
-		ActiveAccountCount:          g.ActiveAccountCount,
-		RateLimitedAccountCount:     g.RateLimitedAccountCount,
-		SortOrder:                   g.SortOrder,
+		Group:                            groupFromServiceBase(g),
+		ProfitControlEnabled:             g.ProfitControlEnabled,
+		ProfitMinMargin:                  g.ProfitMinMargin,
+		ProfitSafetyBuffer:               g.ProfitSafetyBuffer,
+		ModelPricing:                     g.ModelPricing,
+		ModelRouting:                     g.ModelRouting,
+		ModelRoutingEnabled:              g.ModelRoutingEnabled,
+		MCPXMLInject:                     g.MCPXMLInject,
+		DefaultMappedModel:               g.DefaultMappedModel,
+		MessagesDispatchModelConfig:      g.MessagesDispatchModelConfig,
+		ModelsListConfig:                 g.ModelsListConfig,
+		SupportedModelScopes:             g.SupportedModelScopes,
+		AccountCount:                     g.AccountCount,
+		ActiveAccountCount:               g.ActiveAccountCount,
+		RateLimitedAccountCount:          g.RateLimitedAccountCount,
+		WeeklyRateLimitBypassEnabled:     g.WeeklyRateLimitBypassEnabled,
+		WeeklyRateLimitBypassWindowStart: g.WeeklyRateLimitBypassWindowStart,
+		SortOrder:                        g.SortOrder,
+	}
+	if g.WeeklyRateLimitBypassEnabled && g.WeeklyRateLimitBypassWindowStart != nil {
+		autoCloseAt := g.WeeklyRateLimitBypassWindowStart.Add(service.RateLimitWindow7d)
+		out.WeeklyRateLimitBypassAutoCloseAt = &autoCloseAt
 	}
 	if len(g.AccountGroups) > 0 {
 		out.AccountGroups = make([]AccountGroup, 0, len(g.AccountGroups))

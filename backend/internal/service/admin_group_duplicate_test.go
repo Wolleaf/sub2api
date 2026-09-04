@@ -137,6 +137,10 @@ func TestDuplicateGroupCopiesConfigurationDeeplyAndResetsRuntimeState(t *testing
 		DailyLimitUSD:                groupDuplicateTestPointer(11.0),
 		WeeklyLimitUSD:               groupDuplicateTestPointer(22.0),
 		MonthlyLimitUSD:              groupDuplicateTestPointer(33.0),
+		WeeklyRateLimitBypassEnabled: true,
+		WeeklyRateLimitBypassWindowStart: groupDuplicateTestPointer(
+			time.Date(2026, time.July, 2, 2, 3, 4, 0, time.UTC),
+		),
 		DefaultValidityDays:          91,
 		AllowImageGeneration:         true,
 		AllowBatchImageGeneration:    true,
@@ -216,6 +220,8 @@ func TestDuplicateGroupCopiesConfigurationDeeplyAndResetsRuntimeState(t *testing
 	require.Equal(t, source.RPMLimit, duplicate.RPMLimit)
 	require.Equal(t, source.MaxReasoningEffort, duplicate.MaxReasoningEffort)
 	require.Equal(t, source.ReasoningEffortMappings, duplicate.ReasoningEffortMappings)
+	require.False(t, duplicate.WeeklyRateLimitBypassEnabled, "a duplicate must not inherit temporary runtime bypass state")
+	require.Nil(t, duplicate.WeeklyRateLimitBypassWindowStart)
 	require.EqualValues(t, 2, duplicate.AccountCount)
 	require.EqualValues(t, 2, duplicate.ActiveAccountCount)
 	require.NotEmpty(t, duplicate.DuplicateOperationID)

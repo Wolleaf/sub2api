@@ -446,6 +446,7 @@ func (s *OpenAIQuotaAutoResetService) evaluateAccount(ctx context.Context, accou
 	postCtx, cancelPost := context.WithTimeout(context.WithoutCancel(ctx), 8*time.Second)
 	post := RunOpenAIQuotaResetPostProcess(postCtx, accountID, s.quota, s.recoverer, s.accountRepo.GetByID)
 	cancelPost()
+	NotifyOpenAIWeeklyResetObservation(accountID, post.Quota)
 	if !post.AccountStateRecovered || post.WarningCode != "" {
 		code := post.WarningCode
 		if code == "" {

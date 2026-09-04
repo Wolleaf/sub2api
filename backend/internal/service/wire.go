@@ -400,8 +400,9 @@ func ProvideOpenAIWeeklyResetSyncService(
 	repo OpenAIWeeklyResetSyncRepository,
 	quotaService *OpenAIQuotaService,
 	billingCacheService *BillingCacheService,
+	authCacheInvalidator APIKeyAuthCacheInvalidator,
 ) *OpenAIWeeklyResetSyncService {
-	svc := NewOpenAIWeeklyResetSyncService(repo, quotaService, billingCacheService, openAIWeeklySyncInterval)
+	svc := NewOpenAIWeeklyResetSyncService(repo, quotaService, billingCacheService, authCacheInvalidator, openAIWeeklySyncInterval)
 	svc.Start()
 	return svc
 }

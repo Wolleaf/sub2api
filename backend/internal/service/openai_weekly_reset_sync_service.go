@@ -7,18 +7,30 @@ import (
 	"sort"
 	"sync"
 	"time"
+
+	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
 
 const (
-	openAIWeeklyWindowSeconds    int64 = 7 * 24 * 60 * 60
-	openAIWeeklySyncInterval           = 5 * time.Minute
-	openAIWeeklySyncCycleTimeout       = 4 * time.Minute
+	openAIWeeklyWindowSeconds         int64 = 7 * 24 * 60 * 60
+	openAIWeeklySyncInterval                = 5 * time.Minute
+	openAIWeeklySyncCycleTimeout            = 4 * time.Minute
+	openAIWeeklyWindowJitterTolerance       = 5 * time.Minute
 )
 
 var (
 	errOpenAIWeeklyWindowMissing   = errors.New("openai weekly window is missing")
 	errOpenAIWeeklyWindowAmbiguous = errors.New("openai weekly window is ambiguous")
 	errOpenAIWeeklyWindowInvalid   = errors.New("openai weekly window is invalid")
+
+	ErrOpenAIWeeklyBypassUnsafeTopology = infraerrors.Conflict(
+		"OPENAI_WEEKLY_BYPASS_UNSAFE_TOPOLOGY",
+		"weekly rate-limit bypass requires exactly one active non-shadow OpenAI OAuth account",
+	)
+	ErrOpenAIWeeklyBypassNoLimitedKeys = infraerrors.Conflict(
+		"OPENAI_WEEKLY_BYPASS_NO_LIMITED_KEYS",
+		"group has no API key with a configured 7-day limit",
+	)
 )
 
 // OpenAIWeeklyResetSkippedGroup is a sanitized topology diagnostic. It never
@@ -41,9 +53,31 @@ type OpenAIWeeklyResetSubscriptionCacheTarget struct {
 type OpenAIWeeklyResetReconcileResult struct {
 	APIKeyIDs            []int64
 	SubscriptionCaches   []OpenAIWeeklyResetSubscriptionCacheTarget
+	AuthCacheGroupIDs    []int64
 	SkippedGroups        []OpenAIWeeklyResetSkippedGroup
 	UpdatedAPIKeys       int
 	UpdatedSubscriptions int
+}
+
+type OpenAIWeeklyRateLimitBypassCandidate struct {
+	GroupID             int64
+	AccountID           int64
+	AffectedAPIKeyCount int
+	Enabled             bool
+	WindowStart         *time.Time
+}
+
+type OpenAIWeeklyRateLimitBypassStatus struct {
+	Enabled             bool       `json:"enabled"`
+	WindowStart         *time.Time `json:"window_start,omitempty"`
+	AutoCloseAt         *time.Time `json:"auto_close_at,omitempty"`
+	AffectedAPIKeyCount int        `json:"affected_api_key_count"`
+	Changed             bool       `json:"-"`
+}
+
+type OpenAIWeeklyRateLimitBypassClosure struct {
+	GroupID int64
+	Reason  string
 }
 
 // OpenAIWeeklyResetSyncRepository owns the database transaction that
@@ -51,6 +85,9 @@ type OpenAIWeeklyResetReconcileResult struct {
 type OpenAIWeeklyResetSyncRepository interface {
 	ListCandidates(ctx context.Context) (*OpenAIWeeklyResetCandidates, error)
 	ReconcileWeeklyWindow(ctx context.Context, accountID int64, windowStart time.Time, forceInvalidate bool) (*OpenAIWeeklyResetReconcileResult, error)
+	GetWeeklyRateLimitBypassCandidate(ctx context.Context, groupID int64) (*OpenAIWeeklyRateLimitBypassCandidate, error)
+	SetWeeklyRateLimitBypass(ctx context.Context, groupID, accountID int64, enabled bool, windowStart *time.Time) (*OpenAIWeeklyRateLimitBypassStatus, error)
+	CloseExpiredOrUnsafeWeeklyRateLimitBypasses(ctx context.Context, now time.Time) ([]OpenAIWeeklyRateLimitBypassClosure, error)
 }
 
 type openAIWeeklyUsageReader interface {
@@ -74,6 +111,7 @@ type OpenAIWeeklyResetSyncService struct {
 	repo        OpenAIWeeklyResetSyncRepository
 	usageReader openAIWeeklyUsageReader
 	cache       openAIWeeklyResetCacheInvalidator
+	authCache   APIKeyAuthCacheInvalidator
 	interval    time.Duration
 
 	stopCh   chan struct{}
@@ -85,16 +123,23 @@ type OpenAIWeeklyResetSyncService struct {
 	pendingSubscriptions map[openAIWeeklyResetSubscriptionKey]struct{}
 }
 
+var openAIWeeklyResetObservationRegistry struct {
+	sync.RWMutex
+	service *OpenAIWeeklyResetSyncService
+}
+
 func NewOpenAIWeeklyResetSyncService(
 	repo OpenAIWeeklyResetSyncRepository,
 	usageReader openAIWeeklyUsageReader,
 	cache openAIWeeklyResetCacheInvalidator,
+	authCache APIKeyAuthCacheInvalidator,
 	interval time.Duration,
 ) *OpenAIWeeklyResetSyncService {
 	return &OpenAIWeeklyResetSyncService{
 		repo:                 repo,
 		usageReader:          usageReader,
 		cache:                cache,
+		authCache:            authCache,
 		interval:             interval,
 		stopCh:               make(chan struct{}),
 		pendingAPIKeys:       make(map[int64]struct{}),
@@ -106,6 +151,7 @@ func (s *OpenAIWeeklyResetSyncService) Start() {
 	if s == nil || s.repo == nil || s.usageReader == nil || s.interval <= 0 {
 		return
 	}
+	setOpenAIWeeklyResetObservationService(s)
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
@@ -130,6 +176,7 @@ func (s *OpenAIWeeklyResetSyncService) Stop() {
 	}
 	s.stopOnce.Do(func() { close(s.stopCh) })
 	s.wg.Wait()
+	clearOpenAIWeeklyResetObservationService(s)
 }
 
 func (s *OpenAIWeeklyResetSyncService) runOnce(forceInvalidate bool) {
@@ -143,6 +190,17 @@ func (s *OpenAIWeeklyResetSyncService) runOnce(forceInvalidate bool) {
 func (s *OpenAIWeeklyResetSyncService) syncOnce(ctx context.Context, forceInvalidate bool) error {
 	// Retry old cache failures even when the current upstream poll later fails.
 	s.flushPendingInvalidations(ctx)
+	closures, err := s.repo.CloseExpiredOrUnsafeWeeklyRateLimitBypasses(ctx, time.Now().UTC())
+	if err != nil {
+		return err
+	}
+	for _, closure := range closures {
+		s.invalidateAuthCacheForGroup(ctx, closure.GroupID)
+		slog.Info("openai_weekly_rate_limit_bypass_closed",
+			"group_id", closure.GroupID,
+			"reason", closure.Reason,
+		)
+	}
 
 	candidates, err := s.repo.ListCandidates(ctx)
 	if err != nil {
@@ -164,6 +222,10 @@ func (s *OpenAIWeeklyResetSyncService) syncOnce(ctx context.Context, forceInvali
 			slog.Warn("openai_weekly_reset_window_rejected", "account_id", accountID, "error", err)
 			continue
 		}
+		if err := validateOpenAIWeeklyWindowCurrent(windowStart, time.Now().UTC()); err != nil {
+			slog.Warn("openai_weekly_reset_window_rejected", "account_id", accountID, "error", err)
+			continue
+		}
 
 		result, err := s.repo.ReconcileWeeklyWindow(ctx, accountID, windowStart, forceInvalidate)
 		if err != nil {
@@ -174,7 +236,7 @@ func (s *OpenAIWeeklyResetSyncService) syncOnce(ctx context.Context, forceInvali
 			continue
 		}
 		logOpenAIWeeklySkippedGroups(result.SkippedGroups)
-		s.enqueueInvalidations(result)
+		s.applyReconcileResult(ctx, result)
 		if result.UpdatedAPIKeys > 0 || result.UpdatedSubscriptions > 0 {
 			slog.Info("openai_weekly_reset_synced",
 				"account_id", accountID,
@@ -187,6 +249,180 @@ func (s *OpenAIWeeklyResetSyncService) syncOnce(ctx context.Context, forceInvali
 
 	s.flushPendingInvalidations(ctx)
 	return nil
+}
+
+func (s *OpenAIWeeklyResetSyncService) applyReconcileResult(ctx context.Context, result *OpenAIWeeklyResetReconcileResult) {
+	if s == nil || result == nil {
+		return
+	}
+	s.enqueueInvalidations(result)
+	for _, groupID := range result.AuthCacheGroupIDs {
+		s.invalidateAuthCacheForGroup(ctx, groupID)
+	}
+}
+
+func (s *OpenAIWeeklyResetSyncService) reconcileObservedWeeklyWindow(accountID int64, usage *OpenAIQuotaUsage) {
+	if s == nil || s.repo == nil || usage == nil || accountID <= 0 {
+		return
+	}
+	windowStart, err := selectOpenAIWeeklyWindowStart(usage)
+	if err != nil {
+		slog.Warn("openai_weekly_reset_post_credit_window_rejected", "account_id", accountID, "error", err)
+		return
+	}
+	if err := validateOpenAIWeeklyWindowCurrent(windowStart, time.Now().UTC()); err != nil {
+		slog.Warn("openai_weekly_reset_post_credit_window_rejected", "account_id", accountID, "error", err)
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), openAIWeeklySyncCycleTimeout)
+	defer cancel()
+	result, err := s.repo.ReconcileWeeklyWindow(ctx, accountID, windowStart, false)
+	if err != nil {
+		slog.Warn("openai_weekly_reset_post_credit_reconcile_failed", "account_id", accountID, "error", err)
+		return
+	}
+	s.applyReconcileResult(ctx, result)
+	s.flushPendingInvalidations(ctx)
+}
+
+func setOpenAIWeeklyResetObservationService(s *OpenAIWeeklyResetSyncService) {
+	openAIWeeklyResetObservationRegistry.Lock()
+	openAIWeeklyResetObservationRegistry.service = s
+	openAIWeeklyResetObservationRegistry.Unlock()
+}
+
+func clearOpenAIWeeklyResetObservationService(s *OpenAIWeeklyResetSyncService) {
+	openAIWeeklyResetObservationRegistry.Lock()
+	if openAIWeeklyResetObservationRegistry.service == s {
+		openAIWeeklyResetObservationRegistry.service = nil
+	}
+	openAIWeeklyResetObservationRegistry.Unlock()
+}
+
+// NotifyOpenAIWeeklyResetObservation lets both manual and automatic reset-card
+// flows immediately feed their already-fetched post-reset /wham/usage snapshot
+// into the weekly reconciler. A nil or 5h-only snapshot cannot close a weekly
+// bypass and is safely left to the normal poller.
+func NotifyOpenAIWeeklyResetObservation(accountID int64, usage *OpenAIQuotaUsage) {
+	if accountID <= 0 || usage == nil {
+		return
+	}
+	openAIWeeklyResetObservationRegistry.RLock()
+	svc := openAIWeeklyResetObservationRegistry.service
+	openAIWeeklyResetObservationRegistry.RUnlock()
+	if svc != nil {
+		go svc.reconcileObservedWeeklyWindow(accountID, usage)
+	}
+}
+
+// SetWeeklyRateLimitBypass is the admin mutation entry point. Enabling requires
+// a fresh upstream weekly window; disabling never depends on upstream health.
+func (s *OpenAIWeeklyResetSyncService) SetWeeklyRateLimitBypass(ctx context.Context, groupID int64, enabled bool) (*OpenAIWeeklyRateLimitBypassStatus, error) {
+	if s == nil || s.repo == nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_UNAVAILABLE", "weekly rate-limit bypass service is unavailable")
+	}
+	if !enabled {
+		status, err := s.repo.SetWeeklyRateLimitBypass(ctx, groupID, 0, false, nil)
+		if err != nil {
+			return nil, err
+		}
+		if status != nil && status.Changed {
+			s.invalidateAuthCacheForGroup(ctx, groupID)
+		}
+		return status, nil
+	}
+	if s.usageReader == nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_UNAVAILABLE", "OpenAI usage reader is unavailable")
+	}
+	candidate, err := s.repo.GetWeeklyRateLimitBypassCandidate(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	if candidate.Enabled && candidate.WindowStart != nil && now.Before(candidate.WindowStart.Add(RateLimitWindow7d)) {
+		return weeklyRateLimitBypassStatus(candidate.Enabled, candidate.WindowStart, candidate.AffectedAPIKeyCount, false), nil
+	}
+	usage, err := s.usageReader.QueryUsageSnapshot(ctx, candidate.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	windowStart, err := selectOpenAIWeeklyWindowStart(usage)
+	if err != nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_WINDOW_INVALID", "OpenAI weekly window is unavailable").WithCause(err)
+	}
+	if err := validateOpenAIWeeklyWindowCurrent(windowStart, now); err != nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_WINDOW_INVALID", "OpenAI weekly window is unavailable").WithCause(err)
+	}
+	if !now.Before(windowStart.Add(RateLimitWindow7d)) {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_WINDOW_STALE", "OpenAI weekly window has already expired")
+	}
+	status, err := s.repo.SetWeeklyRateLimitBypass(ctx, groupID, candidate.AccountID, true, &windowStart)
+	if err != nil {
+		return nil, err
+	}
+	if status != nil && status.Changed {
+		s.invalidateAuthCacheForGroup(ctx, groupID)
+	}
+	return status, nil
+}
+
+func (s *OpenAIWeeklyResetSyncService) GetWeeklyRateLimitBypassStatus(ctx context.Context, groupID int64) (*OpenAIWeeklyRateLimitBypassStatus, error) {
+	if s == nil || s.repo == nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_UNAVAILABLE", "weekly rate-limit bypass service is unavailable")
+	}
+	candidate, err := s.repo.GetWeeklyRateLimitBypassCandidate(ctx, groupID)
+	if err != nil {
+		return nil, err
+	}
+	if candidate.Enabled {
+		return weeklyRateLimitBypassStatus(true, candidate.WindowStart, candidate.AffectedAPIKeyCount, false), nil
+	}
+	if s.usageReader == nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_UNAVAILABLE", "OpenAI usage reader is unavailable")
+	}
+	usage, err := s.usageReader.QueryUsageSnapshot(ctx, candidate.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	windowStart, err := selectOpenAIWeeklyWindowStart(usage)
+	if err != nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_WINDOW_INVALID", "OpenAI weekly window is unavailable").WithCause(err)
+	}
+	now := time.Now().UTC()
+	if err := validateOpenAIWeeklyWindowCurrent(windowStart, now); err != nil {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_WINDOW_INVALID", "OpenAI weekly window is unavailable").WithCause(err)
+	}
+	if !now.Before(windowStart.Add(RateLimitWindow7d)) {
+		return nil, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_WINDOW_STALE", "OpenAI weekly window has already expired")
+	}
+	autoCloseAt := windowStart.Add(RateLimitWindow7d)
+	return &OpenAIWeeklyRateLimitBypassStatus{
+		Enabled:             false,
+		WindowStart:         &windowStart,
+		AutoCloseAt:         &autoCloseAt,
+		AffectedAPIKeyCount: candidate.AffectedAPIKeyCount,
+	}, nil
+}
+
+func weeklyRateLimitBypassStatus(enabled bool, windowStart *time.Time, affected int, changed bool) *OpenAIWeeklyRateLimitBypassStatus {
+	status := &OpenAIWeeklyRateLimitBypassStatus{
+		Enabled:             enabled,
+		WindowStart:         windowStart,
+		AffectedAPIKeyCount: affected,
+		Changed:             changed,
+	}
+	if enabled && windowStart != nil {
+		autoCloseAt := windowStart.Add(RateLimitWindow7d)
+		status.AutoCloseAt = &autoCloseAt
+	}
+	return status
+}
+
+func (s *OpenAIWeeklyResetSyncService) invalidateAuthCacheForGroup(ctx context.Context, groupID int64) {
+	if s == nil || s.authCache == nil || groupID <= 0 {
+		return
+	}
+	s.authCache.InvalidateAuthCacheByGroupID(ctx, groupID)
 }
 
 func selectOpenAIWeeklyWindowStart(usage *OpenAIQuotaUsage) (time.Time, error) {
@@ -209,6 +445,36 @@ func selectOpenAIWeeklyWindowStart(usage *OpenAIQuotaUsage) (time.Time, error) {
 		return time.Time{}, errOpenAIWeeklyWindowInvalid
 	}
 	return time.Unix(windows[0].ResetAt-openAIWeeklyWindowSeconds, 0).UTC(), nil
+}
+
+// OpenAIWeeklyWindowsEquivalent absorbs the small reset_at drift observed from
+// /wham/usage while still treating real early or natural resets as new windows.
+func OpenAIWeeklyWindowsEquivalent(a, b time.Time) bool {
+	if a.IsZero() || b.IsZero() {
+		return false
+	}
+	delta := a.Sub(b)
+	if delta < 0 {
+		delta = -delta
+	}
+	return delta <= openAIWeeklyWindowJitterTolerance
+}
+
+// validateOpenAIWeeklyWindowCurrent rejects structurally valid but implausible
+// upstream timestamps. The tolerance covers the small clock/reset_at drift
+// observed in production without allowing a malformed far-future window to
+// extend a bypass indefinitely or rewrite local counters.
+func validateOpenAIWeeklyWindowCurrent(windowStart, now time.Time) error {
+	if windowStart.IsZero() || now.IsZero() {
+		return errOpenAIWeeklyWindowInvalid
+	}
+	if windowStart.After(now.Add(openAIWeeklyWindowJitterTolerance)) {
+		return errOpenAIWeeklyWindowInvalid
+	}
+	if !now.Before(windowStart.Add(RateLimitWindow7d + openAIWeeklyWindowJitterTolerance)) {
+		return errOpenAIWeeklyWindowInvalid
+	}
+	return nil
 }
 
 func (s *OpenAIWeeklyResetSyncService) enqueueInvalidations(result *OpenAIWeeklyResetReconcileResult) {

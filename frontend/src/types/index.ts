@@ -633,6 +633,11 @@ export interface AdminGroup extends Group {
   active_account_count?: number
   rate_limited_account_count?: number
 
+  // Admin-only temporary bypass for API-key 7-day USD limits.
+  weekly_rate_limit_bypass_enabled: boolean
+  weekly_rate_limit_bypass_window_start?: string | null
+  weekly_rate_limit_bypass_auto_close_at?: string | null
+
   // OpenAI Messages 调度配置（仅 openai 平台使用）
   default_mapped_model?: string
   messages_dispatch_model_config?: OpenAIMessagesDispatchModelConfig

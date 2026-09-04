@@ -73,6 +73,29 @@ func (k *APIKey) HasRateLimits() bool {
 	return k.RateLimit5h > 0 || k.RateLimit1d > 0 || k.RateLimit7d > 0
 }
 
+// EffectiveRateLimit7d returns the currently enforced 7-day limit. The stored
+// limit remains available through RateLimit7d and usage accounting continues
+// while a group-scoped bypass is active.
+func (k *APIKey) EffectiveRateLimit7d() float64 {
+	if k == nil {
+		return 0
+	}
+	if k.Group != nil && k.Group.IsWeeklyRateLimitBypassActive() {
+		return 0
+	}
+	return k.RateLimit7d
+}
+
+// HasEnforcedRateLimits differs from HasRateLimits: the latter describes
+// configured counters and is used by billing, while this helper describes only
+// limits that should reject the current request.
+func (k *APIKey) HasEnforcedRateLimits() bool {
+	if k == nil {
+		return false
+	}
+	return k.RateLimit5h > 0 || k.RateLimit1d > 0 || k.EffectiveRateLimit7d() > 0
+}
+
 // IsExpired checks if the API key has expired
 func (k *APIKey) IsExpired() bool {
 	if k.ExpiresAt == nil {

@@ -850,6 +850,34 @@ func (_c *GroupCreate) SetNillableProfitSafetyBuffer(v *float64) *GroupCreate {
 	return _c
 }
 
+// SetWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field.
+func (_c *GroupCreate) SetWeeklyRateLimitBypassEnabled(v bool) *GroupCreate {
+	_c.mutation.SetWeeklyRateLimitBypassEnabled(v)
+	return _c
+}
+
+// SetNillableWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableWeeklyRateLimitBypassEnabled(v *bool) *GroupCreate {
+	if v != nil {
+		_c.SetWeeklyRateLimitBypassEnabled(*v)
+	}
+	return _c
+}
+
+// SetWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field.
+func (_c *GroupCreate) SetWeeklyRateLimitBypassWindowStart(v time.Time) *GroupCreate {
+	_c.mutation.SetWeeklyRateLimitBypassWindowStart(v)
+	return _c
+}
+
+// SetNillableWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field if the given value is not nil.
+func (_c *GroupCreate) SetNillableWeeklyRateLimitBypassWindowStart(v *time.Time) *GroupCreate {
+	if v != nil {
+		_c.SetWeeklyRateLimitBypassWindowStart(*v)
+	}
+	return _c
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_c *GroupCreate) AddAPIKeyIDs(ids ...int64) *GroupCreate {
 	_c.mutation.AddAPIKeyIDs(ids...)
@@ -1139,6 +1167,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultProfitSafetyBuffer
 		_c.mutation.SetProfitSafetyBuffer(v)
 	}
+	if _, ok := _c.mutation.WeeklyRateLimitBypassEnabled(); !ok {
+		v := group.DefaultWeeklyRateLimitBypassEnabled
+		_c.mutation.SetWeeklyRateLimitBypassEnabled(v)
+	}
 	return nil
 }
 
@@ -1328,6 +1360,9 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.ProfitSafetyBuffer(); !ok {
 		return &ValidationError{Name: "profit_safety_buffer", err: errors.New(`ent: missing required field "Group.profit_safety_buffer"`)}
+	}
+	if _, ok := _c.mutation.WeeklyRateLimitBypassEnabled(); !ok {
+		return &ValidationError{Name: "weekly_rate_limit_bypass_enabled", err: errors.New(`ent: missing required field "Group.weekly_rate_limit_bypass_enabled"`)}
 	}
 	return nil
 }
@@ -1603,6 +1638,14 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.ProfitSafetyBuffer(); ok {
 		_spec.SetField(group.FieldProfitSafetyBuffer, field.TypeFloat64, value)
 		_node.ProfitSafetyBuffer = value
+	}
+	if value, ok := _c.mutation.WeeklyRateLimitBypassEnabled(); ok {
+		_spec.SetField(group.FieldWeeklyRateLimitBypassEnabled, field.TypeBool, value)
+		_node.WeeklyRateLimitBypassEnabled = value
+	}
+	if value, ok := _c.mutation.WeeklyRateLimitBypassWindowStart(); ok {
+		_spec.SetField(group.FieldWeeklyRateLimitBypassWindowStart, field.TypeTime, value)
+		_node.WeeklyRateLimitBypassWindowStart = &value
 	}
 	if nodes := _c.mutation.APIKeysIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -2765,6 +2808,36 @@ func (u *GroupUpsert) UpdateProfitSafetyBuffer() *GroupUpsert {
 // AddProfitSafetyBuffer adds v to the "profit_safety_buffer" field.
 func (u *GroupUpsert) AddProfitSafetyBuffer(v float64) *GroupUpsert {
 	u.Add(group.FieldProfitSafetyBuffer, v)
+	return u
+}
+
+// SetWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field.
+func (u *GroupUpsert) SetWeeklyRateLimitBypassEnabled(v bool) *GroupUpsert {
+	u.Set(group.FieldWeeklyRateLimitBypassEnabled, v)
+	return u
+}
+
+// UpdateWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateWeeklyRateLimitBypassEnabled() *GroupUpsert {
+	u.SetExcluded(group.FieldWeeklyRateLimitBypassEnabled)
+	return u
+}
+
+// SetWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field.
+func (u *GroupUpsert) SetWeeklyRateLimitBypassWindowStart(v time.Time) *GroupUpsert {
+	u.Set(group.FieldWeeklyRateLimitBypassWindowStart, v)
+	return u
+}
+
+// UpdateWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field to the value that was provided on create.
+func (u *GroupUpsert) UpdateWeeklyRateLimitBypassWindowStart() *GroupUpsert {
+	u.SetExcluded(group.FieldWeeklyRateLimitBypassWindowStart)
+	return u
+}
+
+// ClearWeeklyRateLimitBypassWindowStart clears the value of the "weekly_rate_limit_bypass_window_start" field.
+func (u *GroupUpsert) ClearWeeklyRateLimitBypassWindowStart() *GroupUpsert {
+	u.SetNull(group.FieldWeeklyRateLimitBypassWindowStart)
 	return u
 }
 
@@ -3989,6 +4062,41 @@ func (u *GroupUpsertOne) AddProfitSafetyBuffer(v float64) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateProfitSafetyBuffer() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateProfitSafetyBuffer()
+	})
+}
+
+// SetWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field.
+func (u *GroupUpsertOne) SetWeeklyRateLimitBypassEnabled(v bool) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetWeeklyRateLimitBypassEnabled(v)
+	})
+}
+
+// UpdateWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateWeeklyRateLimitBypassEnabled() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateWeeklyRateLimitBypassEnabled()
+	})
+}
+
+// SetWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field.
+func (u *GroupUpsertOne) SetWeeklyRateLimitBypassWindowStart(v time.Time) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetWeeklyRateLimitBypassWindowStart(v)
+	})
+}
+
+// UpdateWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdateWeeklyRateLimitBypassWindowStart() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateWeeklyRateLimitBypassWindowStart()
+	})
+}
+
+// ClearWeeklyRateLimitBypassWindowStart clears the value of the "weekly_rate_limit_bypass_window_start" field.
+func (u *GroupUpsertOne) ClearWeeklyRateLimitBypassWindowStart() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearWeeklyRateLimitBypassWindowStart()
 	})
 }
 
@@ -5379,6 +5487,41 @@ func (u *GroupUpsertBulk) AddProfitSafetyBuffer(v float64) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateProfitSafetyBuffer() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateProfitSafetyBuffer()
+	})
+}
+
+// SetWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field.
+func (u *GroupUpsertBulk) SetWeeklyRateLimitBypassEnabled(v bool) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetWeeklyRateLimitBypassEnabled(v)
+	})
+}
+
+// UpdateWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateWeeklyRateLimitBypassEnabled() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateWeeklyRateLimitBypassEnabled()
+	})
+}
+
+// SetWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field.
+func (u *GroupUpsertBulk) SetWeeklyRateLimitBypassWindowStart(v time.Time) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetWeeklyRateLimitBypassWindowStart(v)
+	})
+}
+
+// UpdateWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdateWeeklyRateLimitBypassWindowStart() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdateWeeklyRateLimitBypassWindowStart()
+	})
+}
+
+// ClearWeeklyRateLimitBypassWindowStart clears the value of the "weekly_rate_limit_bypass_window_start" field.
+func (u *GroupUpsertBulk) ClearWeeklyRateLimitBypassWindowStart() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.ClearWeeklyRateLimitBypassWindowStart()
 	})
 }
 

@@ -24,6 +24,7 @@ type GroupHandler struct {
 	adminService         service.AdminService
 	dashboardService     *service.DashboardService
 	groupCapacityService *service.GroupCapacityService
+	weeklyResetSync      *service.OpenAIWeeklyResetSyncService
 }
 
 // GetLiveCapability 返回当前服务端是否具备生成 Live attestation 的运行环境。
@@ -86,12 +87,35 @@ func (f optionalLimitField) ToServiceInput() *float64 {
 }
 
 // NewGroupHandler creates a new admin group handler
-func NewGroupHandler(adminService service.AdminService, dashboardService *service.DashboardService, groupCapacityService *service.GroupCapacityService) *GroupHandler {
+func NewGroupHandler(adminService service.AdminService, dashboardService *service.DashboardService, groupCapacityService *service.GroupCapacityService, weeklyResetSync *service.OpenAIWeeklyResetSyncService) *GroupHandler {
 	return &GroupHandler{
 		adminService:         adminService,
 		dashboardService:     dashboardService,
 		groupCapacityService: groupCapacityService,
+		weeklyResetSync:      weeklyResetSync,
 	}
+}
+
+type UpdateWeeklyRateLimitBypassRequest struct {
+	Enabled *bool `json:"enabled" binding:"required"`
+}
+
+func (h *GroupHandler) GetWeeklyRateLimitBypass(c *gin.Context) {
+	groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || groupID <= 0 {
+		response.BadRequest(c, "Invalid group ID")
+		return
+	}
+	if h.weeklyResetSync == nil {
+		response.ErrorFrom(c, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_UNAVAILABLE", "weekly rate-limit bypass service is unavailable"))
+		return
+	}
+	status, err := h.weeklyResetSync.GetWeeklyRateLimitBypassStatus(c.Request.Context(), groupID)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, status)
 }
 
 // CreateGroupRequest represents create group request
@@ -457,6 +481,32 @@ func (h *GroupHandler) GetByID(c *gin.Context) {
 	}
 
 	response.Success(c, dto.GroupFromServiceAdmin(group))
+}
+
+// UpdateWeeklyRateLimitBypass toggles the admin-only, group-scoped API-key
+// weekly limit bypass. Enabling is fail-closed and requires a fresh upstream
+// OpenAI weekly window; disabling is always local and idempotent.
+func (h *GroupHandler) UpdateWeeklyRateLimitBypass(c *gin.Context) {
+	groupID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil || groupID <= 0 {
+		response.BadRequest(c, "Invalid group ID")
+		return
+	}
+	if h.weeklyResetSync == nil {
+		response.ErrorFrom(c, infraerrors.ServiceUnavailable("OPENAI_WEEKLY_BYPASS_UNAVAILABLE", "weekly rate-limit bypass service is unavailable"))
+		return
+	}
+	var req UpdateWeeklyRateLimitBypassRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.Enabled == nil {
+		response.BadRequest(c, "enabled is required")
+		return
+	}
+	status, err := h.weeklyResetSync.SetWeeklyRateLimitBypass(c.Request.Context(), groupID, *req.Enabled)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	response.Success(c, status)
 }
 
 // GetModelsListCandidates handles getting candidate model IDs for custom /v1/models list.

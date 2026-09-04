@@ -140,6 +140,10 @@ const (
 	FieldProfitMinMargin = "profit_min_margin"
 	// FieldProfitSafetyBuffer holds the string denoting the profit_safety_buffer field in the database.
 	FieldProfitSafetyBuffer = "profit_safety_buffer"
+	// FieldWeeklyRateLimitBypassEnabled holds the string denoting the weekly_rate_limit_bypass_enabled field in the database.
+	FieldWeeklyRateLimitBypassEnabled = "weekly_rate_limit_bypass_enabled"
+	// FieldWeeklyRateLimitBypassWindowStart holds the string denoting the weekly_rate_limit_bypass_window_start field in the database.
+	FieldWeeklyRateLimitBypassWindowStart = "weekly_rate_limit_bypass_window_start"
 	// EdgeAPIKeys holds the string denoting the api_keys edge name in mutations.
 	EdgeAPIKeys = "api_keys"
 	// EdgeRedeemCodes holds the string denoting the redeem_codes edge name in mutations.
@@ -277,6 +281,8 @@ var Columns = []string{
 	FieldProfitControlEnabled,
 	FieldProfitMinMargin,
 	FieldProfitSafetyBuffer,
+	FieldWeeklyRateLimitBypassEnabled,
+	FieldWeeklyRateLimitBypassWindowStart,
 }
 
 var (
@@ -412,6 +418,8 @@ var (
 	DefaultProfitMinMargin float64
 	// DefaultProfitSafetyBuffer holds the default value on creation for the "profit_safety_buffer" field.
 	DefaultProfitSafetyBuffer float64
+	// DefaultWeeklyRateLimitBypassEnabled holds the default value on creation for the "weekly_rate_limit_bypass_enabled" field.
+	DefaultWeeklyRateLimitBypassEnabled bool
 )
 
 // OrderOption defines the ordering options for the Group queries.
@@ -695,6 +703,16 @@ func ByProfitMinMargin(opts ...sql.OrderTermOption) OrderOption {
 // ByProfitSafetyBuffer orders the results by the profit_safety_buffer field.
 func ByProfitSafetyBuffer(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldProfitSafetyBuffer, opts...).ToFunc()
+}
+
+// ByWeeklyRateLimitBypassEnabled orders the results by the weekly_rate_limit_bypass_enabled field.
+func ByWeeklyRateLimitBypassEnabled(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWeeklyRateLimitBypassEnabled, opts...).ToFunc()
+}
+
+// ByWeeklyRateLimitBypassWindowStart orders the results by the weekly_rate_limit_bypass_window_start field.
+func ByWeeklyRateLimitBypassWindowStart(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWeeklyRateLimitBypassWindowStart, opts...).ToFunc()
 }
 
 // ByAPIKeysCount orders the results by api_keys count.

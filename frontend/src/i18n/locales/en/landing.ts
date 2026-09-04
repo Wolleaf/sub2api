@@ -148,6 +148,7 @@ export default {
     // Status
     quotaMode: 'Key Quota Mode',
     walletBalance: 'Wallet Balance',
+    unlimited: 'Unlimited',
     // Ring card titles
     totalQuota: 'Total Quota',
     limit5h: '5-Hour Limit',

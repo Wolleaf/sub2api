@@ -376,6 +376,32 @@
           <template #cell-actions="{ row }">
             <div class="flex items-center gap-1">
               <button
+                v-if="row.platform === 'openai'"
+                data-testid="weekly-rate-limit-bypass-toggle"
+                :title="weeklyBypassButtonTitle(row)"
+                :disabled="weeklyBypassLoadingIds.has(row.id)"
+                @click="prepareWeeklyBypassToggle(row)"
+                :class="[
+                  'flex flex-col items-center gap-0.5 rounded-lg p-1.5 transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                  row.weekly_rate_limit_bypass_enabled
+                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-900/50'
+                    : 'text-gray-500 hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20 dark:hover:text-orange-400',
+                ]"
+              >
+                <Icon
+                  name="fire"
+                  size="sm"
+                  :class="weeklyBypassLoadingIds.has(row.id) ? 'animate-pulse' : ''"
+                />
+                <span class="text-xs">
+                  {{
+                    row.weekly_rate_limit_bypass_enabled
+                      ? t("admin.groups.weeklyBypass.active")
+                      : t("admin.groups.weeklyBypass.action")
+                  }}
+                </span>
+              </button>
+              <button
                 @click="handleEdit(row)"
                 class="flex flex-col items-center gap-0.5 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-dark-700 dark:hover:text-primary-400"
               >
@@ -3932,6 +3958,17 @@
     />
 
     <ConfirmDialog
+      :show="showWeeklyBypassDialog"
+      :title="weeklyBypassDialogTitle"
+      :message="weeklyBypassDialogMessage"
+      :confirm-text="weeklyBypassConfirmText"
+      :cancel-text="t('common.cancel')"
+      :danger="weeklyBypassNextEnabled"
+      @confirm="confirmWeeklyBypassToggle"
+      @cancel="closeWeeklyBypassDialog"
+    />
+
+    <ConfirmDialog
       :show="showUnsupportedLiveConfirm"
       :title="t('admin.groups.openaiLive.unsupportedTitle')"
       :message="t('admin.groups.openaiLive.unsupportedMessage')"
@@ -4964,6 +5001,12 @@ let abortController: AbortController | null = null;
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showDeleteDialog = ref(false);
+const showWeeklyBypassDialog = ref(false);
+const weeklyBypassGroup = ref<AdminGroup | null>(null);
+const weeklyBypassPreviewCount = ref(0);
+const weeklyBypassPreviewWindowStart = ref<string | null>(null);
+const weeklyBypassPreviewAutoCloseAt = ref<string | null>(null);
+const weeklyBypassLoadingIds = reactive(new Set<number>());
 const pendingLiveForm = ref<"create" | "edit" | null>(null);
 const showUnsupportedLiveConfirm = computed(
   () => pendingLiveForm.value !== null,
@@ -4984,6 +5027,121 @@ const rateMultipliersGroup = ref<AdminGroup | null>(null);
 const showRPMOverridesModal = ref(false);
 const rpmOverridesGroup = ref<AdminGroup | null>(null);
 const sortableGroups = ref<AdminGroup[]>([]);
+
+const weeklyBypassNextEnabled = computed(
+  () => !weeklyBypassGroup.value?.weekly_rate_limit_bypass_enabled,
+);
+const weeklyBypassDialogTitle = computed(() =>
+  weeklyBypassNextEnabled.value
+    ? t("admin.groups.weeklyBypass.enableTitle")
+    : t("admin.groups.weeklyBypass.disableTitle"),
+);
+const weeklyBypassConfirmText = computed(() =>
+  weeklyBypassNextEnabled.value
+    ? t("admin.groups.weeklyBypass.enable")
+    : t("admin.groups.weeklyBypass.disable"),
+);
+const formatWeeklyBypassTime = (value?: string | null) => {
+  if (!value) return t("admin.groups.weeklyBypass.unknownTime");
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return t("admin.groups.weeklyBypass.unknownTime");
+  }
+  return date.toLocaleString();
+};
+const weeklyBypassDialogMessage = computed(() => {
+  const group = weeklyBypassGroup.value;
+  if (!group) return "";
+  if (!weeklyBypassNextEnabled.value) {
+    return t("admin.groups.weeklyBypass.disableConfirm", {
+      name: group.name,
+    });
+  }
+  return t("admin.groups.weeklyBypass.enableConfirm", {
+    name: group.name,
+    count: weeklyBypassPreviewCount.value,
+    start: formatWeeklyBypassTime(weeklyBypassPreviewWindowStart.value),
+    time: formatWeeklyBypassTime(weeklyBypassPreviewAutoCloseAt.value),
+  });
+});
+
+const weeklyBypassButtonTitle = (group: AdminGroup) => {
+  if (!group.weekly_rate_limit_bypass_enabled) {
+    return t("admin.groups.weeklyBypass.enableHint");
+  }
+  return t("admin.groups.weeklyBypass.activeHint", {
+    time: formatWeeklyBypassTime(
+      group.weekly_rate_limit_bypass_auto_close_at,
+    ),
+  });
+};
+
+const closeWeeklyBypassDialog = () => {
+  showWeeklyBypassDialog.value = false;
+  weeklyBypassGroup.value = null;
+  weeklyBypassPreviewCount.value = 0;
+  weeklyBypassPreviewWindowStart.value = null;
+  weeklyBypassPreviewAutoCloseAt.value = null;
+};
+
+const prepareWeeklyBypassToggle = async (group: AdminGroup) => {
+  if (weeklyBypassLoadingIds.has(group.id)) return;
+  weeklyBypassLoadingIds.add(group.id);
+  try {
+    weeklyBypassGroup.value = group;
+    if (group.weekly_rate_limit_bypass_enabled) {
+      showWeeklyBypassDialog.value = true;
+      return;
+    }
+    const status = await adminAPI.groups.getWeeklyRateLimitBypass(group.id);
+    weeklyBypassPreviewCount.value = status.affected_api_key_count;
+    weeklyBypassPreviewWindowStart.value = status.window_start || null;
+    weeklyBypassPreviewAutoCloseAt.value = status.auto_close_at || null;
+    showWeeklyBypassDialog.value = true;
+  } catch (error: unknown) {
+    weeklyBypassGroup.value = null;
+    appStore.showError(
+      extractApiErrorMessage(
+        error,
+        t("admin.groups.weeklyBypass.previewFailed"),
+      ),
+    );
+  } finally {
+    weeklyBypassLoadingIds.delete(group.id);
+  }
+};
+
+const confirmWeeklyBypassToggle = async () => {
+  const group = weeklyBypassGroup.value;
+  if (!group || weeklyBypassLoadingIds.has(group.id)) return;
+  const enabled = !group.weekly_rate_limit_bypass_enabled;
+  weeklyBypassLoadingIds.add(group.id);
+  try {
+    const status = await adminAPI.groups.updateWeeklyRateLimitBypass(
+      group.id,
+      enabled,
+    );
+    appStore.showSuccess(
+      enabled
+        ? t("admin.groups.weeklyBypass.enabledSuccess", {
+            count: status.affected_api_key_count,
+            time: formatWeeklyBypassTime(status.auto_close_at),
+          })
+        : t("admin.groups.weeklyBypass.disabledSuccess"),
+    );
+    closeWeeklyBypassDialog();
+    await loadGroups();
+  } catch (error: unknown) {
+    appStore.showError(
+      extractApiErrorMessage(
+        error,
+        t("admin.groups.weeklyBypass.updateFailed"),
+      ),
+    );
+  } finally {
+    weeklyBypassLoadingIds.delete(group.id);
+  }
+};
 type ConcreteGroupPlatform = Exclude<GroupPlatform, "composite">;
 type CompositeRouteFormState = {
   public_model: string;

@@ -330,6 +330,16 @@ func ProfitSafetyBuffer(v float64) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldProfitSafetyBuffer, v))
 }
 
+// WeeklyRateLimitBypassEnabled applies equality check predicate on the "weekly_rate_limit_bypass_enabled" field. It's identical to WeeklyRateLimitBypassEnabledEQ.
+func WeeklyRateLimitBypassEnabled(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldWeeklyRateLimitBypassEnabled, v))
+}
+
+// WeeklyRateLimitBypassWindowStart applies equality check predicate on the "weekly_rate_limit_bypass_window_start" field. It's identical to WeeklyRateLimitBypassWindowStartEQ.
+func WeeklyRateLimitBypassWindowStart(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldWeeklyRateLimitBypassWindowStart, v))
+}
+
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.
 func CreatedAtEQ(v time.Time) predicate.Group {
 	return predicate.Group(sql.FieldEQ(FieldCreatedAt, v))
@@ -2548,6 +2558,66 @@ func ProfitSafetyBufferLT(v float64) predicate.Group {
 // ProfitSafetyBufferLTE applies the LTE predicate on the "profit_safety_buffer" field.
 func ProfitSafetyBufferLTE(v float64) predicate.Group {
 	return predicate.Group(sql.FieldLTE(FieldProfitSafetyBuffer, v))
+}
+
+// WeeklyRateLimitBypassEnabledEQ applies the EQ predicate on the "weekly_rate_limit_bypass_enabled" field.
+func WeeklyRateLimitBypassEnabledEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldWeeklyRateLimitBypassEnabled, v))
+}
+
+// WeeklyRateLimitBypassEnabledNEQ applies the NEQ predicate on the "weekly_rate_limit_bypass_enabled" field.
+func WeeklyRateLimitBypassEnabledNEQ(v bool) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldWeeklyRateLimitBypassEnabled, v))
+}
+
+// WeeklyRateLimitBypassWindowStartEQ applies the EQ predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartEQ(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldEQ(FieldWeeklyRateLimitBypassWindowStart, v))
+}
+
+// WeeklyRateLimitBypassWindowStartNEQ applies the NEQ predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartNEQ(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldNEQ(FieldWeeklyRateLimitBypassWindowStart, v))
+}
+
+// WeeklyRateLimitBypassWindowStartIn applies the In predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartIn(vs ...time.Time) predicate.Group {
+	return predicate.Group(sql.FieldIn(FieldWeeklyRateLimitBypassWindowStart, vs...))
+}
+
+// WeeklyRateLimitBypassWindowStartNotIn applies the NotIn predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartNotIn(vs ...time.Time) predicate.Group {
+	return predicate.Group(sql.FieldNotIn(FieldWeeklyRateLimitBypassWindowStart, vs...))
+}
+
+// WeeklyRateLimitBypassWindowStartGT applies the GT predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartGT(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldGT(FieldWeeklyRateLimitBypassWindowStart, v))
+}
+
+// WeeklyRateLimitBypassWindowStartGTE applies the GTE predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartGTE(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldGTE(FieldWeeklyRateLimitBypassWindowStart, v))
+}
+
+// WeeklyRateLimitBypassWindowStartLT applies the LT predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartLT(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldLT(FieldWeeklyRateLimitBypassWindowStart, v))
+}
+
+// WeeklyRateLimitBypassWindowStartLTE applies the LTE predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartLTE(v time.Time) predicate.Group {
+	return predicate.Group(sql.FieldLTE(FieldWeeklyRateLimitBypassWindowStart, v))
+}
+
+// WeeklyRateLimitBypassWindowStartIsNil applies the IsNil predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartIsNil() predicate.Group {
+	return predicate.Group(sql.FieldIsNull(FieldWeeklyRateLimitBypassWindowStart))
+}
+
+// WeeklyRateLimitBypassWindowStartNotNil applies the NotNil predicate on the "weekly_rate_limit_bypass_window_start" field.
+func WeeklyRateLimitBypassWindowStartNotNil() predicate.Group {
+	return predicate.Group(sql.FieldNotNull(FieldWeeklyRateLimitBypassWindowStart))
 }
 
 // HasAPIKeys applies the HasEdge predicate on the "api_keys" edge.

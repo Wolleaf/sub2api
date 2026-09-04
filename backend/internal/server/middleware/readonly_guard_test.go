@@ -49,6 +49,7 @@ func TestReadonlyAdminGuard_DeniesDangerousAndUnknownRoutes(t *testing.T) {
 		"/api/v1/admin/accounts",
 		"/api/v1/admin/accounts/data",
 		"/api/v1/admin/groups/1/api-keys",
+		"/api/v1/admin/groups/3/weekly-rate-limit-bypass",
 		"/api/v1/admin/users/1/api-keys",
 		"/api/v1/admin/users",
 		"/api/v1/admin/usage",

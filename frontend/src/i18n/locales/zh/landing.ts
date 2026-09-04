@@ -148,6 +148,7 @@ export default {
     // Status
     quotaMode: 'Key 限额模式',
     walletBalance: '钱包余额',
+    unlimited: '无限制',
     // Ring card titles
     totalQuota: '总额度',
     limit5h: '5 小时限额',

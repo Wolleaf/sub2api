@@ -22173,6 +22173,8 @@ type GroupMutation struct {
 	addprofit_min_margin                    *float64
 	profit_safety_buffer                    *float64
 	addprofit_safety_buffer                 *float64
+	weekly_rate_limit_bypass_enabled        *bool
+	weekly_rate_limit_bypass_window_start   *time.Time
 	clearedFields                           map[string]struct{}
 	api_keys                                map[int64]struct{}
 	removedapi_keys                         map[int64]struct{}
@@ -25415,6 +25417,91 @@ func (m *GroupMutation) ResetProfitSafetyBuffer() {
 	m.addprofit_safety_buffer = nil
 }
 
+// SetWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field.
+func (m *GroupMutation) SetWeeklyRateLimitBypassEnabled(b bool) {
+	m.weekly_rate_limit_bypass_enabled = &b
+}
+
+// WeeklyRateLimitBypassEnabled returns the value of the "weekly_rate_limit_bypass_enabled" field in the mutation.
+func (m *GroupMutation) WeeklyRateLimitBypassEnabled() (r bool, exists bool) {
+	v := m.weekly_rate_limit_bypass_enabled
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeeklyRateLimitBypassEnabled returns the old "weekly_rate_limit_bypass_enabled" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldWeeklyRateLimitBypassEnabled(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeeklyRateLimitBypassEnabled is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeeklyRateLimitBypassEnabled requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeeklyRateLimitBypassEnabled: %w", err)
+	}
+	return oldValue.WeeklyRateLimitBypassEnabled, nil
+}
+
+// ResetWeeklyRateLimitBypassEnabled resets all changes to the "weekly_rate_limit_bypass_enabled" field.
+func (m *GroupMutation) ResetWeeklyRateLimitBypassEnabled() {
+	m.weekly_rate_limit_bypass_enabled = nil
+}
+
+// SetWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field.
+func (m *GroupMutation) SetWeeklyRateLimitBypassWindowStart(t time.Time) {
+	m.weekly_rate_limit_bypass_window_start = &t
+}
+
+// WeeklyRateLimitBypassWindowStart returns the value of the "weekly_rate_limit_bypass_window_start" field in the mutation.
+func (m *GroupMutation) WeeklyRateLimitBypassWindowStart() (r time.Time, exists bool) {
+	v := m.weekly_rate_limit_bypass_window_start
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWeeklyRateLimitBypassWindowStart returns the old "weekly_rate_limit_bypass_window_start" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldWeeklyRateLimitBypassWindowStart(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWeeklyRateLimitBypassWindowStart is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWeeklyRateLimitBypassWindowStart requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWeeklyRateLimitBypassWindowStart: %w", err)
+	}
+	return oldValue.WeeklyRateLimitBypassWindowStart, nil
+}
+
+// ClearWeeklyRateLimitBypassWindowStart clears the value of the "weekly_rate_limit_bypass_window_start" field.
+func (m *GroupMutation) ClearWeeklyRateLimitBypassWindowStart() {
+	m.weekly_rate_limit_bypass_window_start = nil
+	m.clearedFields[group.FieldWeeklyRateLimitBypassWindowStart] = struct{}{}
+}
+
+// WeeklyRateLimitBypassWindowStartCleared returns if the "weekly_rate_limit_bypass_window_start" field was cleared in this mutation.
+func (m *GroupMutation) WeeklyRateLimitBypassWindowStartCleared() bool {
+	_, ok := m.clearedFields[group.FieldWeeklyRateLimitBypassWindowStart]
+	return ok
+}
+
+// ResetWeeklyRateLimitBypassWindowStart resets all changes to the "weekly_rate_limit_bypass_window_start" field.
+func (m *GroupMutation) ResetWeeklyRateLimitBypassWindowStart() {
+	m.weekly_rate_limit_bypass_window_start = nil
+	delete(m.clearedFields, group.FieldWeeklyRateLimitBypassWindowStart)
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by ids.
 func (m *GroupMutation) AddAPIKeyIDs(ids ...int64) {
 	if m.api_keys == nil {
@@ -25773,7 +25860,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 62)
+	fields := make([]string, 0, 64)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -25960,6 +26047,12 @@ func (m *GroupMutation) Fields() []string {
 	if m.profit_safety_buffer != nil {
 		fields = append(fields, group.FieldProfitSafetyBuffer)
 	}
+	if m.weekly_rate_limit_bypass_enabled != nil {
+		fields = append(fields, group.FieldWeeklyRateLimitBypassEnabled)
+	}
+	if m.weekly_rate_limit_bypass_window_start != nil {
+		fields = append(fields, group.FieldWeeklyRateLimitBypassWindowStart)
+	}
 	return fields
 }
 
@@ -26092,6 +26185,10 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.ProfitMinMargin()
 	case group.FieldProfitSafetyBuffer:
 		return m.ProfitSafetyBuffer()
+	case group.FieldWeeklyRateLimitBypassEnabled:
+		return m.WeeklyRateLimitBypassEnabled()
+	case group.FieldWeeklyRateLimitBypassWindowStart:
+		return m.WeeklyRateLimitBypassWindowStart()
 	}
 	return nil, false
 }
@@ -26225,6 +26322,10 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldProfitMinMargin(ctx)
 	case group.FieldProfitSafetyBuffer:
 		return m.OldProfitSafetyBuffer(ctx)
+	case group.FieldWeeklyRateLimitBypassEnabled:
+		return m.OldWeeklyRateLimitBypassEnabled(ctx)
+	case group.FieldWeeklyRateLimitBypassWindowStart:
+		return m.OldWeeklyRateLimitBypassWindowStart(ctx)
 	}
 	return nil, fmt.Errorf("unknown Group field %s", name)
 }
@@ -26668,6 +26769,20 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetProfitSafetyBuffer(v)
 		return nil
+	case group.FieldWeeklyRateLimitBypassEnabled:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeeklyRateLimitBypassEnabled(v)
+		return nil
+	case group.FieldWeeklyRateLimitBypassWindowStart:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWeeklyRateLimitBypassWindowStart(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Group field %s", name)
 }
@@ -27091,6 +27206,9 @@ func (m *GroupMutation) ClearedFields() []string {
 	if m.FieldCleared(group.FieldModelRouting) {
 		fields = append(fields, group.FieldModelRouting)
 	}
+	if m.FieldCleared(group.FieldWeeklyRateLimitBypassWindowStart) {
+		fields = append(fields, group.FieldWeeklyRateLimitBypassWindowStart)
+	}
 	return fields
 }
 
@@ -27170,6 +27288,9 @@ func (m *GroupMutation) ClearField(name string) error {
 		return nil
 	case group.FieldModelRouting:
 		m.ClearModelRouting()
+		return nil
+	case group.FieldWeeklyRateLimitBypassWindowStart:
+		m.ClearWeeklyRateLimitBypassWindowStart()
 		return nil
 	}
 	return fmt.Errorf("unknown Group nullable field %s", name)
@@ -27364,6 +27485,12 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldProfitSafetyBuffer:
 		m.ResetProfitSafetyBuffer()
+		return nil
+	case group.FieldWeeklyRateLimitBypassEnabled:
+		m.ResetWeeklyRateLimitBypassEnabled()
+		return nil
+	case group.FieldWeeklyRateLimitBypassWindowStart:
+		m.ResetWeeklyRateLimitBypassWindowStart()
 		return nil
 	}
 	return fmt.Errorf("unknown Group field %s", name)

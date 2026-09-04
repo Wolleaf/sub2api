@@ -46,6 +46,7 @@ const messages: Record<string, string> = {
   'keyUsage.limitMonthly': 'Monthly Limit',
   'keyUsage.remainingQuota': 'Remaining Quota',
   'keyUsage.usedQuota': 'Used Quota',
+  'keyUsage.unlimited': 'Unlimited',
   'keyUsage.subscriptionType': 'Subscription Type',
   'keyUsage.todayRequests': 'Today Requests',
   'keyUsage.todayInputTokens': 'Today Input',
@@ -229,6 +230,39 @@ describe('KeyUsageView daily detail', () => {
     expect(requestUrl).toContain('start_date=2026-07-13')
     expect(requestUrl).toContain('end_date=2026-07-13')
 
+    wrapper.unmount()
+  })
+
+  it('renders an unrestricted bypass as Unlimited instead of a negative amount', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        mode: 'unrestricted',
+        isValid: true,
+        planName: 'codex pro 20x',
+        remaining: -1,
+        usage: { today: {}, total: {}, rpm: 0, tpm: 0 },
+        daily_usage: [],
+      }),
+    } as Response)
+
+    const wrapper = mount(KeyUsageView, {
+      global: {
+        stubs: {
+          RouterLink: { template: '<a><slot /></a>' },
+          LocaleSwitcher: true,
+          Icon: true,
+        },
+      },
+    })
+
+    await wrapper.find('input').setValue('sk-test-key')
+    await wrapper.find('input').trigger('keydown.enter')
+    await flushPromises()
+    await nextTick()
+
+    expect(wrapper.text()).toContain('Unlimited')
+    expect(wrapper.text()).not.toContain('$-1.00')
     wrapper.unmount()
   })
 })

@@ -40,6 +40,12 @@ type Group struct {
 	MonthlyLimitUSD     *float64
 	DefaultValidityDays int
 
+	// WeeklyRateLimitBypassEnabled temporarily disables only API-key 7-day
+	// monetary limit enforcement for this group. Configured limits and usage
+	// counters continue to persist so the original policy resumes losslessly.
+	WeeklyRateLimitBypassEnabled     bool
+	WeeklyRateLimitBypassWindowStart *time.Time
+
 	// 图片生成计费配置（antigravity 和 gemini 平台使用）
 	AllowImageGeneration         bool
 	AllowBatchImageGeneration    bool
@@ -151,6 +157,21 @@ func (g *Group) HasWeeklyLimit() bool {
 
 func (g *Group) HasMonthlyLimit() bool {
 	return g.MonthlyLimitUSD != nil && *g.MonthlyLimitUSD > 0
+}
+
+// IsWeeklyRateLimitBypassActiveAt is intentionally time-bounded in the hot
+// path. Even if the background synchronizer or cache invalidation is delayed,
+// a bypass can never remain effective beyond the upstream window recorded when
+// it was enabled.
+func (g *Group) IsWeeklyRateLimitBypassActiveAt(now time.Time) bool {
+	if g == nil || !g.WeeklyRateLimitBypassEnabled || g.WeeklyRateLimitBypassWindowStart == nil {
+		return false
+	}
+	return now.Before(g.WeeklyRateLimitBypassWindowStart.Add(RateLimitWindow7d))
+}
+
+func (g *Group) IsWeeklyRateLimitBypassActive() bool {
+	return g.IsWeeklyRateLimitBypassActiveAt(time.Now())
 }
 
 // GetImagePrice 根据 image_size 返回对应的图片生成价格

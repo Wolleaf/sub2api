@@ -1162,6 +1162,40 @@ func (_u *GroupUpdate) AddProfitSafetyBuffer(v float64) *GroupUpdate {
 	return _u
 }
 
+// SetWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field.
+func (_u *GroupUpdate) SetWeeklyRateLimitBypassEnabled(v bool) *GroupUpdate {
+	_u.mutation.SetWeeklyRateLimitBypassEnabled(v)
+	return _u
+}
+
+// SetNillableWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableWeeklyRateLimitBypassEnabled(v *bool) *GroupUpdate {
+	if v != nil {
+		_u.SetWeeklyRateLimitBypassEnabled(*v)
+	}
+	return _u
+}
+
+// SetWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field.
+func (_u *GroupUpdate) SetWeeklyRateLimitBypassWindowStart(v time.Time) *GroupUpdate {
+	_u.mutation.SetWeeklyRateLimitBypassWindowStart(v)
+	return _u
+}
+
+// SetNillableWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillableWeeklyRateLimitBypassWindowStart(v *time.Time) *GroupUpdate {
+	if v != nil {
+		_u.SetWeeklyRateLimitBypassWindowStart(*v)
+	}
+	return _u
+}
+
+// ClearWeeklyRateLimitBypassWindowStart clears the value of the "weekly_rate_limit_bypass_window_start" field.
+func (_u *GroupUpdate) ClearWeeklyRateLimitBypassWindowStart() *GroupUpdate {
+	_u.mutation.ClearWeeklyRateLimitBypassWindowStart()
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdate) AddAPIKeyIDs(ids ...int64) *GroupUpdate {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -1843,6 +1877,15 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedProfitSafetyBuffer(); ok {
 		_spec.AddField(group.FieldProfitSafetyBuffer, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.WeeklyRateLimitBypassEnabled(); ok {
+		_spec.SetField(group.FieldWeeklyRateLimitBypassEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.WeeklyRateLimitBypassWindowStart(); ok {
+		_spec.SetField(group.FieldWeeklyRateLimitBypassWindowStart, field.TypeTime, value)
+	}
+	if _u.mutation.WeeklyRateLimitBypassWindowStartCleared() {
+		_spec.ClearField(group.FieldWeeklyRateLimitBypassWindowStart, field.TypeTime)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -3283,6 +3326,40 @@ func (_u *GroupUpdateOne) AddProfitSafetyBuffer(v float64) *GroupUpdateOne {
 	return _u
 }
 
+// SetWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field.
+func (_u *GroupUpdateOne) SetWeeklyRateLimitBypassEnabled(v bool) *GroupUpdateOne {
+	_u.mutation.SetWeeklyRateLimitBypassEnabled(v)
+	return _u
+}
+
+// SetNillableWeeklyRateLimitBypassEnabled sets the "weekly_rate_limit_bypass_enabled" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableWeeklyRateLimitBypassEnabled(v *bool) *GroupUpdateOne {
+	if v != nil {
+		_u.SetWeeklyRateLimitBypassEnabled(*v)
+	}
+	return _u
+}
+
+// SetWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field.
+func (_u *GroupUpdateOne) SetWeeklyRateLimitBypassWindowStart(v time.Time) *GroupUpdateOne {
+	_u.mutation.SetWeeklyRateLimitBypassWindowStart(v)
+	return _u
+}
+
+// SetNillableWeeklyRateLimitBypassWindowStart sets the "weekly_rate_limit_bypass_window_start" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillableWeeklyRateLimitBypassWindowStart(v *time.Time) *GroupUpdateOne {
+	if v != nil {
+		_u.SetWeeklyRateLimitBypassWindowStart(*v)
+	}
+	return _u
+}
+
+// ClearWeeklyRateLimitBypassWindowStart clears the value of the "weekly_rate_limit_bypass_window_start" field.
+func (_u *GroupUpdateOne) ClearWeeklyRateLimitBypassWindowStart() *GroupUpdateOne {
+	_u.mutation.ClearWeeklyRateLimitBypassWindowStart()
+	return _u
+}
+
 // AddAPIKeyIDs adds the "api_keys" edge to the APIKey entity by IDs.
 func (_u *GroupUpdateOne) AddAPIKeyIDs(ids ...int64) *GroupUpdateOne {
 	_u.mutation.AddAPIKeyIDs(ids...)
@@ -3994,6 +4071,15 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 	}
 	if value, ok := _u.mutation.AddedProfitSafetyBuffer(); ok {
 		_spec.AddField(group.FieldProfitSafetyBuffer, field.TypeFloat64, value)
+	}
+	if value, ok := _u.mutation.WeeklyRateLimitBypassEnabled(); ok {
+		_spec.SetField(group.FieldWeeklyRateLimitBypassEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.WeeklyRateLimitBypassWindowStart(); ok {
+		_spec.SetField(group.FieldWeeklyRateLimitBypassWindowStart, field.TypeTime, value)
+	}
+	if _u.mutation.WeeklyRateLimitBypassWindowStartCleared() {
+		_spec.ClearField(group.FieldWeeklyRateLimitBypassWindowStart, field.TypeTime)
 	}
 	if _u.mutation.APIKeysCleared() {
 		edge := &sqlgraph.EdgeSpec{

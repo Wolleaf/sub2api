@@ -1205,6 +1205,10 @@ func init() {
 	groupDescProfitSafetyBuffer := groupFields[58].Descriptor()
 	// group.DefaultProfitSafetyBuffer holds the default value on creation for the profit_safety_buffer field.
 	group.DefaultProfitSafetyBuffer = groupDescProfitSafetyBuffer.Default.(float64)
+	// groupDescWeeklyRateLimitBypassEnabled is the schema descriptor for weekly_rate_limit_bypass_enabled field.
+	groupDescWeeklyRateLimitBypassEnabled := groupFields[59].Descriptor()
+	// group.DefaultWeeklyRateLimitBypassEnabled holds the default value on creation for the weekly_rate_limit_bypass_enabled field.
+	group.DefaultWeeklyRateLimitBypassEnabled = groupDescWeeklyRateLimitBypassEnabled.Default.(bool)
 	idempotencyrecordMixin := schema.IdempotencyRecord{}.Mixin()
 	idempotencyrecordMixinFields0 := idempotencyrecordMixin[0].Fields()
 	_ = idempotencyrecordMixinFields0
