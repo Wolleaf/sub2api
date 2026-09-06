@@ -20,7 +20,10 @@ func (r *openAIModelSyncRepository) AppendModels(ctx context.Context, a *service
 		return false, nil
 	}
 	additions := make(map[string]string)
-	existing := a.Credentials["model_mapping"].(map[string]any)
+	existing, ok := a.Credentials["model_mapping"].(map[string]any)
+	if !ok {
+		return false, nil
+	}
 	for _, model := range models {
 		model = strings.TrimSpace(model)
 		if model == "" || strings.ContainsAny(model, "*\r\n\x00") {

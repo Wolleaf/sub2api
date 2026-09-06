@@ -102,7 +102,10 @@ func (s *OpenAIModelSyncService) syncAccount(ctx context.Context, id int64) {
 	}
 	models := make([]string, 0, len(catalog.Models))
 	seen := make(map[string]bool)
-	existing := account.Credentials["model_mapping"].(map[string]any)
+	existing, ok := account.Credentials["model_mapping"].(map[string]any)
+	if !ok {
+		return
+	}
 	for _, model := range catalog.Models {
 		model = strings.TrimSpace(model)
 		if model == "" || strings.ContainsAny(model, "*\r\n\x00") || seen[model] {
