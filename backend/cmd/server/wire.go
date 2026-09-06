@@ -98,6 +98,7 @@ func provideCleanup(
 	tokenRefresh *service.TokenRefreshService,
 	accountExpiry *service.AccountExpiryService,
 	openAIWeeklyResetSync *service.OpenAIWeeklyResetSyncService,
+	openAIModelSync *service.OpenAIModelSyncService,
 	cnProviderBalanceCheck *service.CNProviderBalanceCheckService,
 	codexVersionSync *service.OpenAICodexVersionSyncService,
 	proxyExpiry *service.ProxyExpiryService,
@@ -265,6 +266,10 @@ func provideCleanup(
 			}},
 			{"OpenAIWeeklyResetSyncService", func() error {
 				openAIWeeklyResetSync.Stop()
+				return nil
+			}},
+			{"OpenAIModelSyncService", func() error {
+				openAIModelSync.Stop()
 				return nil
 			}},
 			{"CNProviderBalanceCheckService", func() error {

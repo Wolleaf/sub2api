@@ -68,6 +68,7 @@ func TestProvideCleanup_WithMinimalDependencies_NoPanic(t *testing.T) {
 		tokenRefreshSvc,
 		accountExpirySvc,
 		openAIWeeklyResetSyncSvc,
+		nil, // openAIModelSync
 		nil, // cnProviderBalanceCheck
 		codexVersionSyncSvc,
 		proxyExpirySvc,

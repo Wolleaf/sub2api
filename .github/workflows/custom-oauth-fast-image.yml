@@ -3,7 +3,7 @@ name: Custom OAuth Fast image
 on:
   push:
     branches:
-      - feat/one-click-weekly-bypass-v0.1.185
+      - feat/openai-model-auto-sync-v0.1.185
     tags:
       - custom-v0.1.185-oauth-fast.*
   workflow_dispatch:
@@ -14,7 +14,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/wolleaf/sub2api
-  CUSTOM_VERSION: 0.1.185-oauth-fast.7
+  CUSTOM_VERSION: 0.1.185-oauth-fast.8
 
 jobs:
   build:

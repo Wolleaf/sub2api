@@ -923,6 +923,7 @@ var ProviderSet = wire.NewSet(
 	wire.Bind(new(GrokOAuthReconciler), new(*TokenRefreshService)),
 	ProvideAccountExpiryService,
 	ProvideOpenAIWeeklyResetSyncService,
+	ProvideOpenAIModelSyncService,
 	ProvideOpenAICodexVersionSyncService,
 	ProvideProxyExpiryService,
 	ProvideSubscriptionExpiryService,

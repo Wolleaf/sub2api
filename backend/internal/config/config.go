@@ -96,6 +96,7 @@ type Config struct {
 	UsageCleanup            UsageCleanupConfig            `mapstructure:"usage_cleanup"`
 	Concurrency             ConcurrencyConfig             `mapstructure:"concurrency"`
 	TokenRefresh            TokenRefreshConfig            `mapstructure:"token_refresh"`
+	OpenAIModelSync         OpenAIModelSyncConfig         `mapstructure:"openai_model_sync"`
 	RunMode                 string                        `mapstructure:"run_mode" yaml:"run_mode"`
 	Timezone                string                        `mapstructure:"timezone"` // e.g. "Asia/Shanghai", "UTC"
 	Gemini                  GeminiConfig                  `mapstructure:"gemini"`
@@ -2536,6 +2537,8 @@ func setDefaults() {
 
 	// TokenRefresh
 	viper.SetDefault("token_refresh.enabled", true)
+	viper.SetDefault("openai_model_sync.account_ids", "")
+	viper.SetDefault("openai_model_sync.interval_minutes", 15)
 	viper.SetDefault("token_refresh.check_interval_minutes", 5)        // 每5分钟检查一次
 	viper.SetDefault("token_refresh.refresh_before_expiry_hours", 0.5) // 提前30分钟刷新（适配Google 1小时token）
 	viper.SetDefault("token_refresh.max_retries", 3)                   // 最多重试3次
@@ -2644,6 +2647,12 @@ func setEnvReachableDefaults() {
 }
 
 func (c *Config) Validate() error {
+	if _, err := c.OpenAIModelSync.IDs(); err != nil {
+		return err
+	}
+	if c.OpenAIModelSync.AccountIDs != "" && (c.OpenAIModelSync.IntervalMinutes < 5 || c.OpenAIModelSync.IntervalMinutes > 1440) {
+		return fmt.Errorf("openai_model_sync.interval_minutes must be between 5 and 1440")
+	}
 	forwardedClientIPHeaders, err := NormalizeForwardedClientIPHeaders(c.Security.ForwardedClientIPHeaders)
 	if err != nil {
 		return fmt.Errorf("security.forwarded_client_ip_headers: %w", err)
