@@ -26,13 +26,17 @@ func TestOpenAIModelSyncAtomicAppend(t *testing.T) {
 	})
 	a := &service.Account{ID: id, Platform: service.PlatformOpenAI, Type: service.AccountTypeOAuth, Status: service.StatusActive, Credentials: credentials}
 	r := NewOpenAIModelSyncRepository(integrationDB)
+	// Existing database triggers may initialize extra fields on insert.
+	// Compare against the persisted baseline, not the insert literal.
+	var extraBefore []byte
+	require.NoError(t, integrationDB.QueryRowContext(ctx, `SELECT extra FROM accounts WHERE id=$1`, id).Scan(&extraBefore))
 	changed, err := r.AppendModels(ctx, a, []string{"new", "new", "old"})
 	require.NoError(t, err)
 	require.True(t, changed)
 	var actual, extra []byte
 	require.NoError(t, integrationDB.QueryRowContext(ctx, `SELECT credentials,extra FROM accounts WHERE id=$1`, id).Scan(&actual, &extra))
 	require.JSONEq(t, `{"access_token":"test-token","model_mapping":{"old":"old","new":"new"}}`, string(actual))
-	require.JSONEq(t, `{"other":true}`, string(extra))
+	require.JSONEq(t, string(extraBefore), string(extra))
 	var events int
 	require.NoError(t, integrationDB.QueryRowContext(ctx, `SELECT count(*) FROM scheduler_outbox WHERE account_id=$1 AND event_type=$2`, id, service.SchedulerOutboxEventAccountChanged).Scan(&events))
 	require.Equal(t, 1, events)
