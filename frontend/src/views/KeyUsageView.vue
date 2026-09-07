@@ -236,6 +236,10 @@
             </div>
           </div>
 
+          <p v-if="resultData?.upstream_weekly_quota" class="max-w-2xl mx-auto mt-4 text-sm leading-relaxed text-gray-500 dark:text-dark-400">
+            {{ t('keys.upstreamWeeklyQuotaNote') }}
+          </p>
+
           <!-- Detail Card -->
           <div
             v-if="detailRows.length > 0"
@@ -701,8 +705,6 @@ const detailRows = computed<DetailRow[]>(() => {
       const share = data.upstream_weekly_quota
       rows.push({ iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', iconSvg: ICON_SHIELD,
         label: t('keys.upstreamWeeklyEstimated'), value: `${share.observed_at ? Number(share.used).toFixed(2) + '%' : '—'} / ${share.limit}%`, valueClass: getUsageColor(share.limit > 0 ? share.used / share.limit * 100 : 0) })
-      rows.push({ iconBg: 'bg-indigo-500/10', iconColor: 'text-indigo-500', iconSvg: ICON_CALENDAR,
-        label: t('keys.upstreamWeeklyQuota'), value: t('keys.upstreamWeeklyQuotaNote'), valueClass: '' })
     }
     if (data.quota) {
       const remainColor = data.quota.remaining <= 0 ? 'text-rose-500'
