@@ -34,11 +34,20 @@ func TestBillingErrorDetails_APIKeyRateLimitStillMaps(t *testing.T) {
 		service.ErrAPIKeyRateLimit5hExceeded,
 		service.ErrAPIKeyRateLimit1dExceeded,
 		service.ErrAPIKeyRateLimit7dExceeded,
+		service.ErrAPIKeyUpstreamWeeklyExceeded,
 	} {
 		status, code, _, _ := billingErrorDetails(err)
 		require.Equal(t, http.StatusTooManyRequests, status, "status for %v", err)
 		require.Equal(t, "rate_limit_exceeded", code)
 	}
+}
+
+func TestBillingErrorDetails_UpstreamWeeklyUnavailable(t *testing.T) {
+	status, code, msg, retryAfter := billingErrorDetails(service.ErrAPIKeyUpstreamWeeklyUnavailable)
+	require.Equal(t, http.StatusServiceUnavailable, status)
+	require.Equal(t, "upstream_quota_unavailable", code)
+	require.NotEmpty(t, msg)
+	require.Equal(t, 60, retryAfter)
 }
 
 func TestBillingErrorDetails_BillingServiceUnavailableMapsTo503(t *testing.T) {

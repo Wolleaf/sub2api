@@ -617,7 +617,7 @@ const ringItems = computed<RingItem[]>(() => {
     if (data.upstream_weekly_quota) {
       const share = data.upstream_weekly_quota
       items.push({ title: t('keys.upstreamWeeklyQuota'), pct: share.limit > 0 ? Math.min(100, Math.round(share.used / share.limit * 100)) : 0,
-        amount: `${Number(share.used).toFixed(2)}% / ${share.limit}%`, iconType: 'calendar', resetAt: share.reset_at })
+        amount: `${share.observed_at ? Number(share.used).toFixed(2) + '%' : '—'} / ${share.limit}%`, iconType: 'calendar', resetAt: share.reset_at })
     }
     if (data.quota) {
       const pct = data.quota.limit > 0 ? Math.min(Math.round((data.quota.used / data.quota.limit) * 100), 100) : 0
@@ -696,7 +696,7 @@ const detailRows = computed<DetailRow[]>(() => {
     if (data.upstream_weekly_quota) {
       const share = data.upstream_weekly_quota
       rows.push({ iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-500', iconSvg: ICON_SHIELD,
-        label: t('keys.upstreamWeeklyEstimated'), value: `${Number(share.used).toFixed(2)}% / ${share.limit}%`, valueClass: getUsageColor(share.limit > 0 ? share.used / share.limit * 100 : 0) })
+        label: t('keys.upstreamWeeklyEstimated'), value: `${share.observed_at ? Number(share.used).toFixed(2) + '%' : '—'} / ${share.limit}%`, valueClass: getUsageColor(share.limit > 0 ? share.used / share.limit * 100 : 0) })
       rows.push({ iconBg: 'bg-indigo-500/10', iconColor: 'text-indigo-500', iconSvg: ICON_CALENDAR,
         label: t('keys.upstreamWeeklyQuota'), value: t('keys.upstreamWeeklyQuotaNote'), valueClass: '' })
     }

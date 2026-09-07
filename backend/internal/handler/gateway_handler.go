@@ -1710,8 +1710,16 @@ func (h *GatewayHandler) usageQuotaLimited(c *gin.Context, ctx context.Context, 
 	}
 
 	// 速率限制信息（从 DB 获取实时用量）
+	if apiKey.EffectiveUpstreamWeeklyLimitPercent() > 0 && h.apiKeyService == nil {
+		h.errorResponse(c, http.StatusServiceUnavailable, "upstream_quota_unavailable", service.ErrAPIKeyUpstreamWeeklyUnavailable.Error())
+		return
+	}
 	if apiKey.HasEnforcedRateLimits() && h.apiKeyService != nil {
 		rateLimitData, err := h.apiKeyService.GetRateLimitData(ctx, apiKey.ID)
+		if apiKey.EffectiveUpstreamWeeklyLimitPercent() > 0 && (err != nil || rateLimitData == nil) {
+			h.errorResponse(c, http.StatusServiceUnavailable, "upstream_quota_unavailable", service.ErrAPIKeyUpstreamWeeklyUnavailable.Error())
+			return
+		}
 		if err == nil && rateLimitData != nil {
 			var rateLimits []gin.H
 			if limit := apiKey.EffectiveUpstreamWeeklyLimitPercent(); limit > 0 {
@@ -2487,6 +2495,12 @@ func extractQuotaResetSeconds(err error) int {
 }
 
 func billingErrorDetails(err error) (status int, code, message string, retryAfter int) {
+	if errors.Is(err, service.ErrAPIKeyUpstreamWeeklyUnavailable) {
+		return http.StatusServiceUnavailable, "upstream_quota_unavailable", pkgerrors.Message(err), 60
+	}
+	if errors.Is(err, service.ErrAPIKeyUpstreamWeeklyExceeded) {
+		return http.StatusTooManyRequests, "rate_limit_exceeded", pkgerrors.Message(err), 0
+	}
 	if errors.Is(err, service.ErrBillingServiceUnavailable) {
 		msg := pkgerrors.Message(err)
 		if msg == "" {
