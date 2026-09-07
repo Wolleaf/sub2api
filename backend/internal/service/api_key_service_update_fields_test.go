@@ -108,6 +108,21 @@ func TestAPIKeyUpdate_DeclaresUsageColumnsOnExplicitReset(t *testing.T) {
 	require.Equal(t, []APIKeyUpdateFields{{QuotaUsed: true, RateLimitUsage: true}}, repo.updateFields)
 }
 
+func TestAPIKeyUpdate_UpstreamShareRequiresAdminAndPreservesCounters(t *testing.T) {
+	limit := 25.0
+	key := &APIKey{ID: 1, UserID: 7, Key: "sk-test", Status: StatusActive, User: &User{ID: 7, Role: RoleUser}, Usage7d: 900}
+	svc, repo := newUpdateFieldsAPIKeyService(key)
+	_, err := svc.Update(context.Background(), 1, 7, UpdateAPIKeyRequest{UpstreamWeeklyLimitPercent: &limit})
+	require.ErrorIs(t, err, ErrInsufficientPerms)
+	require.Empty(t, repo.updateFields)
+	key.User.Role = RoleAdmin
+	updated, err := svc.Update(context.Background(), 1, 7, UpdateAPIKeyRequest{UpstreamWeeklyLimitPercent: &limit})
+	require.NoError(t, err)
+	require.Equal(t, 900.0, updated.Usage7d)
+	require.Equal(t, 25.0, updated.UpstreamWeeklyLimitPercent)
+	require.Equal(t, []APIKeyUpdateFields{{UpstreamWeeklyLimit: true}}, repo.updateFields)
+}
+
 // 配额扩容会顺带把 quota_exhausted 复活为 active，此时必须声明 status。
 func TestAPIKeyUpdate_DeclaresStatusWhenReactivated(t *testing.T) {
 	quota := 500.0

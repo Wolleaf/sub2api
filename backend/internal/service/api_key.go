@@ -53,15 +53,20 @@ type APIKey struct {
 	ExpiresAt *time.Time // Expiration time (nil = never expires)
 
 	// Rate limit fields
-	RateLimit5h   float64    // Rate limit in USD per 5h (0 = unlimited)
-	RateLimit1d   float64    // Rate limit in USD per 1d (0 = unlimited)
-	RateLimit7d   float64    // Rate limit in USD per 7d (0 = unlimited)
-	Usage5h       float64    // Used amount in current 5h window
-	Usage1d       float64    // Used amount in current 1d window
-	Usage7d       float64    // Used amount in current 7d window
-	Window5hStart *time.Time // Start of current 5h window
-	Window1dStart *time.Time // Start of current 1d window
-	Window7dStart *time.Time // Start of current 7d window
+	RateLimit5h                float64    // Rate limit in USD per 5h (0 = unlimited)
+	RateLimit1d                float64    // Rate limit in USD per 1d (0 = unlimited)
+	RateLimit7d                float64    // Rate limit in USD per 7d (0 = unlimited)
+	Usage5h                    float64    // Used amount in current 5h window
+	Usage1d                    float64    // Used amount in current 1d window
+	Usage7d                    float64    // Used amount in current 7d window
+	Window5hStart              *time.Time // Start of current 5h window
+	Window1dStart              *time.Time // Start of current 1d window
+	Window7dStart              *time.Time // Start of current 7d window
+	RateLimitResetAt           *time.Time
+	UpstreamWeeklyLimitPercent float64
+	UpstreamWeeklyUsagePercent float64
+	UpstreamWeeklyWindowStart  *time.Time
+	UpstreamWeeklyObservedAt   *time.Time
 }
 
 func (k *APIKey) IsActive() bool {
@@ -70,7 +75,7 @@ func (k *APIKey) IsActive() bool {
 
 // HasRateLimits returns true if any rate limit window is configured
 func (k *APIKey) HasRateLimits() bool {
-	return k.RateLimit5h > 0 || k.RateLimit1d > 0 || k.RateLimit7d > 0
+	return k.RateLimit5h > 0 || k.RateLimit1d > 0 || k.RateLimit7d > 0 || k.UpstreamWeeklyLimitPercent > 0
 }
 
 // EffectiveRateLimit7d returns the currently enforced 7-day limit. The stored
@@ -79,6 +84,9 @@ func (k *APIKey) HasRateLimits() bool {
 func (k *APIKey) EffectiveRateLimit7d() float64 {
 	if k == nil {
 		return 0
+	}
+	if k.UpstreamWeeklyLimitPercent > 0 {
+		return 0 // Dollar accounting is informational when upstream shares enforce the week.
 	}
 	if k.Group != nil && k.Group.IsWeeklyRateLimitBypassActive() {
 		return 0
@@ -93,7 +101,14 @@ func (k *APIKey) HasEnforcedRateLimits() bool {
 	if k == nil {
 		return false
 	}
-	return k.RateLimit5h > 0 || k.RateLimit1d > 0 || k.EffectiveRateLimit7d() > 0
+	return k.RateLimit5h > 0 || k.RateLimit1d > 0 || k.EffectiveRateLimit7d() > 0 || k.EffectiveUpstreamWeeklyLimitPercent() > 0
+}
+
+func (k *APIKey) EffectiveUpstreamWeeklyLimitPercent() float64 {
+	if k == nil || (k.Group != nil && k.Group.IsWeeklyRateLimitBypassActive()) {
+		return 0
+	}
+	return k.UpstreamWeeklyLimitPercent
 }
 
 // IsExpired checks if the API key has expired

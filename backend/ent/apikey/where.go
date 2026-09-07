@@ -130,6 +130,31 @@ func RateLimit7d(v float64) predicate.APIKey {
 	return predicate.APIKey(sql.FieldEQ(FieldRateLimit7d, v))
 }
 
+// RateLimitResetAt applies equality check predicate on the "rate_limit_reset_at" field. It's identical to RateLimitResetAtEQ.
+func RateLimitResetAt(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldRateLimitResetAt, v))
+}
+
+// UpstreamWeeklyLimitPercent applies equality check predicate on the "upstream_weekly_limit_percent" field. It's identical to UpstreamWeeklyLimitPercentEQ.
+func UpstreamWeeklyLimitPercent(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyLimitPercent, v))
+}
+
+// UpstreamWeeklyUsagePercent applies equality check predicate on the "upstream_weekly_usage_percent" field. It's identical to UpstreamWeeklyUsagePercentEQ.
+func UpstreamWeeklyUsagePercent(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyUsagePercent, v))
+}
+
+// UpstreamWeeklyWindowStart applies equality check predicate on the "upstream_weekly_window_start" field. It's identical to UpstreamWeeklyWindowStartEQ.
+func UpstreamWeeklyWindowStart(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyWindowStart, v))
+}
+
+// UpstreamWeeklyObservedAt applies equality check predicate on the "upstream_weekly_observed_at" field. It's identical to UpstreamWeeklyObservedAtEQ.
+func UpstreamWeeklyObservedAt(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyObservedAt, v))
+}
+
 // Usage5h applies equality check predicate on the "usage_5h" field. It's identical to Usage5hEQ.
 func Usage5h(v float64) predicate.APIKey {
 	return predicate.APIKey(sql.FieldEQ(FieldUsage5h, v))
@@ -853,6 +878,236 @@ func RateLimit7dLT(v float64) predicate.APIKey {
 // RateLimit7dLTE applies the LTE predicate on the "rate_limit_7d" field.
 func RateLimit7dLTE(v float64) predicate.APIKey {
 	return predicate.APIKey(sql.FieldLTE(FieldRateLimit7d, v))
+}
+
+// RateLimitResetAtEQ applies the EQ predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtEQ(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldRateLimitResetAt, v))
+}
+
+// RateLimitResetAtNEQ applies the NEQ predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtNEQ(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNEQ(FieldRateLimitResetAt, v))
+}
+
+// RateLimitResetAtIn applies the In predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtIn(vs ...time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldIn(FieldRateLimitResetAt, vs...))
+}
+
+// RateLimitResetAtNotIn applies the NotIn predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtNotIn(vs ...time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotIn(FieldRateLimitResetAt, vs...))
+}
+
+// RateLimitResetAtGT applies the GT predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtGT(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGT(FieldRateLimitResetAt, v))
+}
+
+// RateLimitResetAtGTE applies the GTE predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtGTE(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGTE(FieldRateLimitResetAt, v))
+}
+
+// RateLimitResetAtLT applies the LT predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtLT(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLT(FieldRateLimitResetAt, v))
+}
+
+// RateLimitResetAtLTE applies the LTE predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtLTE(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLTE(FieldRateLimitResetAt, v))
+}
+
+// RateLimitResetAtIsNil applies the IsNil predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtIsNil() predicate.APIKey {
+	return predicate.APIKey(sql.FieldIsNull(FieldRateLimitResetAt))
+}
+
+// RateLimitResetAtNotNil applies the NotNil predicate on the "rate_limit_reset_at" field.
+func RateLimitResetAtNotNil() predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotNull(FieldRateLimitResetAt))
+}
+
+// UpstreamWeeklyLimitPercentEQ applies the EQ predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentEQ(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyLimitPercent, v))
+}
+
+// UpstreamWeeklyLimitPercentNEQ applies the NEQ predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentNEQ(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNEQ(FieldUpstreamWeeklyLimitPercent, v))
+}
+
+// UpstreamWeeklyLimitPercentIn applies the In predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentIn(vs ...float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldIn(FieldUpstreamWeeklyLimitPercent, vs...))
+}
+
+// UpstreamWeeklyLimitPercentNotIn applies the NotIn predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentNotIn(vs ...float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotIn(FieldUpstreamWeeklyLimitPercent, vs...))
+}
+
+// UpstreamWeeklyLimitPercentGT applies the GT predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentGT(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGT(FieldUpstreamWeeklyLimitPercent, v))
+}
+
+// UpstreamWeeklyLimitPercentGTE applies the GTE predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentGTE(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGTE(FieldUpstreamWeeklyLimitPercent, v))
+}
+
+// UpstreamWeeklyLimitPercentLT applies the LT predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentLT(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLT(FieldUpstreamWeeklyLimitPercent, v))
+}
+
+// UpstreamWeeklyLimitPercentLTE applies the LTE predicate on the "upstream_weekly_limit_percent" field.
+func UpstreamWeeklyLimitPercentLTE(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLTE(FieldUpstreamWeeklyLimitPercent, v))
+}
+
+// UpstreamWeeklyUsagePercentEQ applies the EQ predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentEQ(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyUsagePercent, v))
+}
+
+// UpstreamWeeklyUsagePercentNEQ applies the NEQ predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentNEQ(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNEQ(FieldUpstreamWeeklyUsagePercent, v))
+}
+
+// UpstreamWeeklyUsagePercentIn applies the In predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentIn(vs ...float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldIn(FieldUpstreamWeeklyUsagePercent, vs...))
+}
+
+// UpstreamWeeklyUsagePercentNotIn applies the NotIn predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentNotIn(vs ...float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotIn(FieldUpstreamWeeklyUsagePercent, vs...))
+}
+
+// UpstreamWeeklyUsagePercentGT applies the GT predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentGT(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGT(FieldUpstreamWeeklyUsagePercent, v))
+}
+
+// UpstreamWeeklyUsagePercentGTE applies the GTE predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentGTE(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGTE(FieldUpstreamWeeklyUsagePercent, v))
+}
+
+// UpstreamWeeklyUsagePercentLT applies the LT predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentLT(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLT(FieldUpstreamWeeklyUsagePercent, v))
+}
+
+// UpstreamWeeklyUsagePercentLTE applies the LTE predicate on the "upstream_weekly_usage_percent" field.
+func UpstreamWeeklyUsagePercentLTE(v float64) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLTE(FieldUpstreamWeeklyUsagePercent, v))
+}
+
+// UpstreamWeeklyWindowStartEQ applies the EQ predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartEQ(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyWindowStart, v))
+}
+
+// UpstreamWeeklyWindowStartNEQ applies the NEQ predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartNEQ(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNEQ(FieldUpstreamWeeklyWindowStart, v))
+}
+
+// UpstreamWeeklyWindowStartIn applies the In predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartIn(vs ...time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldIn(FieldUpstreamWeeklyWindowStart, vs...))
+}
+
+// UpstreamWeeklyWindowStartNotIn applies the NotIn predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartNotIn(vs ...time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotIn(FieldUpstreamWeeklyWindowStart, vs...))
+}
+
+// UpstreamWeeklyWindowStartGT applies the GT predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartGT(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGT(FieldUpstreamWeeklyWindowStart, v))
+}
+
+// UpstreamWeeklyWindowStartGTE applies the GTE predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartGTE(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGTE(FieldUpstreamWeeklyWindowStart, v))
+}
+
+// UpstreamWeeklyWindowStartLT applies the LT predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartLT(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLT(FieldUpstreamWeeklyWindowStart, v))
+}
+
+// UpstreamWeeklyWindowStartLTE applies the LTE predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartLTE(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLTE(FieldUpstreamWeeklyWindowStart, v))
+}
+
+// UpstreamWeeklyWindowStartIsNil applies the IsNil predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartIsNil() predicate.APIKey {
+	return predicate.APIKey(sql.FieldIsNull(FieldUpstreamWeeklyWindowStart))
+}
+
+// UpstreamWeeklyWindowStartNotNil applies the NotNil predicate on the "upstream_weekly_window_start" field.
+func UpstreamWeeklyWindowStartNotNil() predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotNull(FieldUpstreamWeeklyWindowStart))
+}
+
+// UpstreamWeeklyObservedAtEQ applies the EQ predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtEQ(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldEQ(FieldUpstreamWeeklyObservedAt, v))
+}
+
+// UpstreamWeeklyObservedAtNEQ applies the NEQ predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtNEQ(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNEQ(FieldUpstreamWeeklyObservedAt, v))
+}
+
+// UpstreamWeeklyObservedAtIn applies the In predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtIn(vs ...time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldIn(FieldUpstreamWeeklyObservedAt, vs...))
+}
+
+// UpstreamWeeklyObservedAtNotIn applies the NotIn predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtNotIn(vs ...time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotIn(FieldUpstreamWeeklyObservedAt, vs...))
+}
+
+// UpstreamWeeklyObservedAtGT applies the GT predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtGT(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGT(FieldUpstreamWeeklyObservedAt, v))
+}
+
+// UpstreamWeeklyObservedAtGTE applies the GTE predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtGTE(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldGTE(FieldUpstreamWeeklyObservedAt, v))
+}
+
+// UpstreamWeeklyObservedAtLT applies the LT predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtLT(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLT(FieldUpstreamWeeklyObservedAt, v))
+}
+
+// UpstreamWeeklyObservedAtLTE applies the LTE predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtLTE(v time.Time) predicate.APIKey {
+	return predicate.APIKey(sql.FieldLTE(FieldUpstreamWeeklyObservedAt, v))
+}
+
+// UpstreamWeeklyObservedAtIsNil applies the IsNil predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtIsNil() predicate.APIKey {
+	return predicate.APIKey(sql.FieldIsNull(FieldUpstreamWeeklyObservedAt))
+}
+
+// UpstreamWeeklyObservedAtNotNil applies the NotNil predicate on the "upstream_weekly_observed_at" field.
+func UpstreamWeeklyObservedAtNotNil() predicate.APIKey {
+	return predicate.APIKey(sql.FieldNotNull(FieldUpstreamWeeklyObservedAt))
 }
 
 // Usage5hEQ applies the EQ predicate on the "usage_5h" field.

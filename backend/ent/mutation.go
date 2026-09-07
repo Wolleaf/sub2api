@@ -108,51 +108,58 @@ const (
 // APIKeyMutation represents an operation that mutates the APIKey nodes in the graph.
 type APIKeyMutation struct {
 	config
-	op                 Op
-	typ                string
-	id                 *int64
-	created_at         *time.Time
-	updated_at         *time.Time
-	deleted_at         *time.Time
-	key                *string
-	name               *string
-	status             *string
-	last_used_at       *time.Time
-	ip_whitelist       *[]string
-	appendip_whitelist []string
-	ip_blacklist       *[]string
-	appendip_blacklist []string
-	quota              *float64
-	addquota           *float64
-	quota_used         *float64
-	addquota_used      *float64
-	expires_at         *time.Time
-	rate_limit_5h      *float64
-	addrate_limit_5h   *float64
-	rate_limit_1d      *float64
-	addrate_limit_1d   *float64
-	rate_limit_7d      *float64
-	addrate_limit_7d   *float64
-	usage_5h           *float64
-	addusage_5h        *float64
-	usage_1d           *float64
-	addusage_1d        *float64
-	usage_7d           *float64
-	addusage_7d        *float64
-	window_5h_start    *time.Time
-	window_1d_start    *time.Time
-	window_7d_start    *time.Time
-	clearedFields      map[string]struct{}
-	user               *int64
-	cleareduser        bool
-	group              *int64
-	clearedgroup       bool
-	usage_logs         map[int64]struct{}
-	removedusage_logs  map[int64]struct{}
-	clearedusage_logs  bool
-	done               bool
-	oldValue           func(context.Context) (*APIKey, error)
-	predicates         []predicate.APIKey
+	op                               Op
+	typ                              string
+	id                               *int64
+	created_at                       *time.Time
+	updated_at                       *time.Time
+	deleted_at                       *time.Time
+	key                              *string
+	name                             *string
+	status                           *string
+	last_used_at                     *time.Time
+	ip_whitelist                     *[]string
+	appendip_whitelist               []string
+	ip_blacklist                     *[]string
+	appendip_blacklist               []string
+	quota                            *float64
+	addquota                         *float64
+	quota_used                       *float64
+	addquota_used                    *float64
+	expires_at                       *time.Time
+	rate_limit_5h                    *float64
+	addrate_limit_5h                 *float64
+	rate_limit_1d                    *float64
+	addrate_limit_1d                 *float64
+	rate_limit_7d                    *float64
+	addrate_limit_7d                 *float64
+	rate_limit_reset_at              *time.Time
+	upstream_weekly_limit_percent    *float64
+	addupstream_weekly_limit_percent *float64
+	upstream_weekly_usage_percent    *float64
+	addupstream_weekly_usage_percent *float64
+	upstream_weekly_window_start     *time.Time
+	upstream_weekly_observed_at      *time.Time
+	usage_5h                         *float64
+	addusage_5h                      *float64
+	usage_1d                         *float64
+	addusage_1d                      *float64
+	usage_7d                         *float64
+	addusage_7d                      *float64
+	window_5h_start                  *time.Time
+	window_1d_start                  *time.Time
+	window_7d_start                  *time.Time
+	clearedFields                    map[string]struct{}
+	user                             *int64
+	cleareduser                      bool
+	group                            *int64
+	clearedgroup                     bool
+	usage_logs                       map[int64]struct{}
+	removedusage_logs                map[int64]struct{}
+	clearedusage_logs                bool
+	done                             bool
+	oldValue                         func(context.Context) (*APIKey, error)
+	predicates                       []predicate.APIKey
 }
 
 var _ ent.Mutation = (*APIKeyMutation)(nil)
@@ -1075,6 +1082,265 @@ func (m *APIKeyMutation) ResetRateLimit7d() {
 	m.addrate_limit_7d = nil
 }
 
+// SetRateLimitResetAt sets the "rate_limit_reset_at" field.
+func (m *APIKeyMutation) SetRateLimitResetAt(t time.Time) {
+	m.rate_limit_reset_at = &t
+}
+
+// RateLimitResetAt returns the value of the "rate_limit_reset_at" field in the mutation.
+func (m *APIKeyMutation) RateLimitResetAt() (r time.Time, exists bool) {
+	v := m.rate_limit_reset_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRateLimitResetAt returns the old "rate_limit_reset_at" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldRateLimitResetAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRateLimitResetAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRateLimitResetAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRateLimitResetAt: %w", err)
+	}
+	return oldValue.RateLimitResetAt, nil
+}
+
+// ClearRateLimitResetAt clears the value of the "rate_limit_reset_at" field.
+func (m *APIKeyMutation) ClearRateLimitResetAt() {
+	m.rate_limit_reset_at = nil
+	m.clearedFields[apikey.FieldRateLimitResetAt] = struct{}{}
+}
+
+// RateLimitResetAtCleared returns if the "rate_limit_reset_at" field was cleared in this mutation.
+func (m *APIKeyMutation) RateLimitResetAtCleared() bool {
+	_, ok := m.clearedFields[apikey.FieldRateLimitResetAt]
+	return ok
+}
+
+// ResetRateLimitResetAt resets all changes to the "rate_limit_reset_at" field.
+func (m *APIKeyMutation) ResetRateLimitResetAt() {
+	m.rate_limit_reset_at = nil
+	delete(m.clearedFields, apikey.FieldRateLimitResetAt)
+}
+
+// SetUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field.
+func (m *APIKeyMutation) SetUpstreamWeeklyLimitPercent(f float64) {
+	m.upstream_weekly_limit_percent = &f
+	m.addupstream_weekly_limit_percent = nil
+}
+
+// UpstreamWeeklyLimitPercent returns the value of the "upstream_weekly_limit_percent" field in the mutation.
+func (m *APIKeyMutation) UpstreamWeeklyLimitPercent() (r float64, exists bool) {
+	v := m.upstream_weekly_limit_percent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpstreamWeeklyLimitPercent returns the old "upstream_weekly_limit_percent" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldUpstreamWeeklyLimitPercent(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpstreamWeeklyLimitPercent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpstreamWeeklyLimitPercent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpstreamWeeklyLimitPercent: %w", err)
+	}
+	return oldValue.UpstreamWeeklyLimitPercent, nil
+}
+
+// AddUpstreamWeeklyLimitPercent adds f to the "upstream_weekly_limit_percent" field.
+func (m *APIKeyMutation) AddUpstreamWeeklyLimitPercent(f float64) {
+	if m.addupstream_weekly_limit_percent != nil {
+		*m.addupstream_weekly_limit_percent += f
+	} else {
+		m.addupstream_weekly_limit_percent = &f
+	}
+}
+
+// AddedUpstreamWeeklyLimitPercent returns the value that was added to the "upstream_weekly_limit_percent" field in this mutation.
+func (m *APIKeyMutation) AddedUpstreamWeeklyLimitPercent() (r float64, exists bool) {
+	v := m.addupstream_weekly_limit_percent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpstreamWeeklyLimitPercent resets all changes to the "upstream_weekly_limit_percent" field.
+func (m *APIKeyMutation) ResetUpstreamWeeklyLimitPercent() {
+	m.upstream_weekly_limit_percent = nil
+	m.addupstream_weekly_limit_percent = nil
+}
+
+// SetUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field.
+func (m *APIKeyMutation) SetUpstreamWeeklyUsagePercent(f float64) {
+	m.upstream_weekly_usage_percent = &f
+	m.addupstream_weekly_usage_percent = nil
+}
+
+// UpstreamWeeklyUsagePercent returns the value of the "upstream_weekly_usage_percent" field in the mutation.
+func (m *APIKeyMutation) UpstreamWeeklyUsagePercent() (r float64, exists bool) {
+	v := m.upstream_weekly_usage_percent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpstreamWeeklyUsagePercent returns the old "upstream_weekly_usage_percent" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldUpstreamWeeklyUsagePercent(ctx context.Context) (v float64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpstreamWeeklyUsagePercent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpstreamWeeklyUsagePercent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpstreamWeeklyUsagePercent: %w", err)
+	}
+	return oldValue.UpstreamWeeklyUsagePercent, nil
+}
+
+// AddUpstreamWeeklyUsagePercent adds f to the "upstream_weekly_usage_percent" field.
+func (m *APIKeyMutation) AddUpstreamWeeklyUsagePercent(f float64) {
+	if m.addupstream_weekly_usage_percent != nil {
+		*m.addupstream_weekly_usage_percent += f
+	} else {
+		m.addupstream_weekly_usage_percent = &f
+	}
+}
+
+// AddedUpstreamWeeklyUsagePercent returns the value that was added to the "upstream_weekly_usage_percent" field in this mutation.
+func (m *APIKeyMutation) AddedUpstreamWeeklyUsagePercent() (r float64, exists bool) {
+	v := m.addupstream_weekly_usage_percent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetUpstreamWeeklyUsagePercent resets all changes to the "upstream_weekly_usage_percent" field.
+func (m *APIKeyMutation) ResetUpstreamWeeklyUsagePercent() {
+	m.upstream_weekly_usage_percent = nil
+	m.addupstream_weekly_usage_percent = nil
+}
+
+// SetUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field.
+func (m *APIKeyMutation) SetUpstreamWeeklyWindowStart(t time.Time) {
+	m.upstream_weekly_window_start = &t
+}
+
+// UpstreamWeeklyWindowStart returns the value of the "upstream_weekly_window_start" field in the mutation.
+func (m *APIKeyMutation) UpstreamWeeklyWindowStart() (r time.Time, exists bool) {
+	v := m.upstream_weekly_window_start
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpstreamWeeklyWindowStart returns the old "upstream_weekly_window_start" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldUpstreamWeeklyWindowStart(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpstreamWeeklyWindowStart is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpstreamWeeklyWindowStart requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpstreamWeeklyWindowStart: %w", err)
+	}
+	return oldValue.UpstreamWeeklyWindowStart, nil
+}
+
+// ClearUpstreamWeeklyWindowStart clears the value of the "upstream_weekly_window_start" field.
+func (m *APIKeyMutation) ClearUpstreamWeeklyWindowStart() {
+	m.upstream_weekly_window_start = nil
+	m.clearedFields[apikey.FieldUpstreamWeeklyWindowStart] = struct{}{}
+}
+
+// UpstreamWeeklyWindowStartCleared returns if the "upstream_weekly_window_start" field was cleared in this mutation.
+func (m *APIKeyMutation) UpstreamWeeklyWindowStartCleared() bool {
+	_, ok := m.clearedFields[apikey.FieldUpstreamWeeklyWindowStart]
+	return ok
+}
+
+// ResetUpstreamWeeklyWindowStart resets all changes to the "upstream_weekly_window_start" field.
+func (m *APIKeyMutation) ResetUpstreamWeeklyWindowStart() {
+	m.upstream_weekly_window_start = nil
+	delete(m.clearedFields, apikey.FieldUpstreamWeeklyWindowStart)
+}
+
+// SetUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field.
+func (m *APIKeyMutation) SetUpstreamWeeklyObservedAt(t time.Time) {
+	m.upstream_weekly_observed_at = &t
+}
+
+// UpstreamWeeklyObservedAt returns the value of the "upstream_weekly_observed_at" field in the mutation.
+func (m *APIKeyMutation) UpstreamWeeklyObservedAt() (r time.Time, exists bool) {
+	v := m.upstream_weekly_observed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpstreamWeeklyObservedAt returns the old "upstream_weekly_observed_at" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldUpstreamWeeklyObservedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpstreamWeeklyObservedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpstreamWeeklyObservedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpstreamWeeklyObservedAt: %w", err)
+	}
+	return oldValue.UpstreamWeeklyObservedAt, nil
+}
+
+// ClearUpstreamWeeklyObservedAt clears the value of the "upstream_weekly_observed_at" field.
+func (m *APIKeyMutation) ClearUpstreamWeeklyObservedAt() {
+	m.upstream_weekly_observed_at = nil
+	m.clearedFields[apikey.FieldUpstreamWeeklyObservedAt] = struct{}{}
+}
+
+// UpstreamWeeklyObservedAtCleared returns if the "upstream_weekly_observed_at" field was cleared in this mutation.
+func (m *APIKeyMutation) UpstreamWeeklyObservedAtCleared() bool {
+	_, ok := m.clearedFields[apikey.FieldUpstreamWeeklyObservedAt]
+	return ok
+}
+
+// ResetUpstreamWeeklyObservedAt resets all changes to the "upstream_weekly_observed_at" field.
+func (m *APIKeyMutation) ResetUpstreamWeeklyObservedAt() {
+	m.upstream_weekly_observed_at = nil
+	delete(m.clearedFields, apikey.FieldUpstreamWeeklyObservedAt)
+}
+
 // SetUsage5h sets the "usage_5h" field.
 func (m *APIKeyMutation) SetUsage5h(f float64) {
 	m.usage_5h = &f
@@ -1532,7 +1798,7 @@ func (m *APIKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *APIKeyMutation) Fields() []string {
-	fields := make([]string, 0, 23)
+	fields := make([]string, 0, 28)
 	if m.created_at != nil {
 		fields = append(fields, apikey.FieldCreatedAt)
 	}
@@ -1583,6 +1849,21 @@ func (m *APIKeyMutation) Fields() []string {
 	}
 	if m.rate_limit_7d != nil {
 		fields = append(fields, apikey.FieldRateLimit7d)
+	}
+	if m.rate_limit_reset_at != nil {
+		fields = append(fields, apikey.FieldRateLimitResetAt)
+	}
+	if m.upstream_weekly_limit_percent != nil {
+		fields = append(fields, apikey.FieldUpstreamWeeklyLimitPercent)
+	}
+	if m.upstream_weekly_usage_percent != nil {
+		fields = append(fields, apikey.FieldUpstreamWeeklyUsagePercent)
+	}
+	if m.upstream_weekly_window_start != nil {
+		fields = append(fields, apikey.FieldUpstreamWeeklyWindowStart)
+	}
+	if m.upstream_weekly_observed_at != nil {
+		fields = append(fields, apikey.FieldUpstreamWeeklyObservedAt)
 	}
 	if m.usage_5h != nil {
 		fields = append(fields, apikey.FieldUsage5h)
@@ -1644,6 +1925,16 @@ func (m *APIKeyMutation) Field(name string) (ent.Value, bool) {
 		return m.RateLimit1d()
 	case apikey.FieldRateLimit7d:
 		return m.RateLimit7d()
+	case apikey.FieldRateLimitResetAt:
+		return m.RateLimitResetAt()
+	case apikey.FieldUpstreamWeeklyLimitPercent:
+		return m.UpstreamWeeklyLimitPercent()
+	case apikey.FieldUpstreamWeeklyUsagePercent:
+		return m.UpstreamWeeklyUsagePercent()
+	case apikey.FieldUpstreamWeeklyWindowStart:
+		return m.UpstreamWeeklyWindowStart()
+	case apikey.FieldUpstreamWeeklyObservedAt:
+		return m.UpstreamWeeklyObservedAt()
 	case apikey.FieldUsage5h:
 		return m.Usage5h()
 	case apikey.FieldUsage1d:
@@ -1699,6 +1990,16 @@ func (m *APIKeyMutation) OldField(ctx context.Context, name string) (ent.Value, 
 		return m.OldRateLimit1d(ctx)
 	case apikey.FieldRateLimit7d:
 		return m.OldRateLimit7d(ctx)
+	case apikey.FieldRateLimitResetAt:
+		return m.OldRateLimitResetAt(ctx)
+	case apikey.FieldUpstreamWeeklyLimitPercent:
+		return m.OldUpstreamWeeklyLimitPercent(ctx)
+	case apikey.FieldUpstreamWeeklyUsagePercent:
+		return m.OldUpstreamWeeklyUsagePercent(ctx)
+	case apikey.FieldUpstreamWeeklyWindowStart:
+		return m.OldUpstreamWeeklyWindowStart(ctx)
+	case apikey.FieldUpstreamWeeklyObservedAt:
+		return m.OldUpstreamWeeklyObservedAt(ctx)
 	case apikey.FieldUsage5h:
 		return m.OldUsage5h(ctx)
 	case apikey.FieldUsage1d:
@@ -1839,6 +2140,41 @@ func (m *APIKeyMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetRateLimit7d(v)
 		return nil
+	case apikey.FieldRateLimitResetAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRateLimitResetAt(v)
+		return nil
+	case apikey.FieldUpstreamWeeklyLimitPercent:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpstreamWeeklyLimitPercent(v)
+		return nil
+	case apikey.FieldUpstreamWeeklyUsagePercent:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpstreamWeeklyUsagePercent(v)
+		return nil
+	case apikey.FieldUpstreamWeeklyWindowStart:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpstreamWeeklyWindowStart(v)
+		return nil
+	case apikey.FieldUpstreamWeeklyObservedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpstreamWeeklyObservedAt(v)
+		return nil
 	case apikey.FieldUsage5h:
 		v, ok := value.(float64)
 		if !ok {
@@ -1904,6 +2240,12 @@ func (m *APIKeyMutation) AddedFields() []string {
 	if m.addrate_limit_7d != nil {
 		fields = append(fields, apikey.FieldRateLimit7d)
 	}
+	if m.addupstream_weekly_limit_percent != nil {
+		fields = append(fields, apikey.FieldUpstreamWeeklyLimitPercent)
+	}
+	if m.addupstream_weekly_usage_percent != nil {
+		fields = append(fields, apikey.FieldUpstreamWeeklyUsagePercent)
+	}
 	if m.addusage_5h != nil {
 		fields = append(fields, apikey.FieldUsage5h)
 	}
@@ -1931,6 +2273,10 @@ func (m *APIKeyMutation) AddedField(name string) (ent.Value, bool) {
 		return m.AddedRateLimit1d()
 	case apikey.FieldRateLimit7d:
 		return m.AddedRateLimit7d()
+	case apikey.FieldUpstreamWeeklyLimitPercent:
+		return m.AddedUpstreamWeeklyLimitPercent()
+	case apikey.FieldUpstreamWeeklyUsagePercent:
+		return m.AddedUpstreamWeeklyUsagePercent()
 	case apikey.FieldUsage5h:
 		return m.AddedUsage5h()
 	case apikey.FieldUsage1d:
@@ -1981,6 +2327,20 @@ func (m *APIKeyMutation) AddField(name string, value ent.Value) error {
 		}
 		m.AddRateLimit7d(v)
 		return nil
+	case apikey.FieldUpstreamWeeklyLimitPercent:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpstreamWeeklyLimitPercent(v)
+		return nil
+	case apikey.FieldUpstreamWeeklyUsagePercent:
+		v, ok := value.(float64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddUpstreamWeeklyUsagePercent(v)
+		return nil
 	case apikey.FieldUsage5h:
 		v, ok := value.(float64)
 		if !ok {
@@ -2028,6 +2388,15 @@ func (m *APIKeyMutation) ClearedFields() []string {
 	if m.FieldCleared(apikey.FieldExpiresAt) {
 		fields = append(fields, apikey.FieldExpiresAt)
 	}
+	if m.FieldCleared(apikey.FieldRateLimitResetAt) {
+		fields = append(fields, apikey.FieldRateLimitResetAt)
+	}
+	if m.FieldCleared(apikey.FieldUpstreamWeeklyWindowStart) {
+		fields = append(fields, apikey.FieldUpstreamWeeklyWindowStart)
+	}
+	if m.FieldCleared(apikey.FieldUpstreamWeeklyObservedAt) {
+		fields = append(fields, apikey.FieldUpstreamWeeklyObservedAt)
+	}
 	if m.FieldCleared(apikey.FieldWindow5hStart) {
 		fields = append(fields, apikey.FieldWindow5hStart)
 	}
@@ -2068,6 +2437,15 @@ func (m *APIKeyMutation) ClearField(name string) error {
 		return nil
 	case apikey.FieldExpiresAt:
 		m.ClearExpiresAt()
+		return nil
+	case apikey.FieldRateLimitResetAt:
+		m.ClearRateLimitResetAt()
+		return nil
+	case apikey.FieldUpstreamWeeklyWindowStart:
+		m.ClearUpstreamWeeklyWindowStart()
+		return nil
+	case apikey.FieldUpstreamWeeklyObservedAt:
+		m.ClearUpstreamWeeklyObservedAt()
 		return nil
 	case apikey.FieldWindow5hStart:
 		m.ClearWindow5hStart()
@@ -2136,6 +2514,21 @@ func (m *APIKeyMutation) ResetField(name string) error {
 		return nil
 	case apikey.FieldRateLimit7d:
 		m.ResetRateLimit7d()
+		return nil
+	case apikey.FieldRateLimitResetAt:
+		m.ResetRateLimitResetAt()
+		return nil
+	case apikey.FieldUpstreamWeeklyLimitPercent:
+		m.ResetUpstreamWeeklyLimitPercent()
+		return nil
+	case apikey.FieldUpstreamWeeklyUsagePercent:
+		m.ResetUpstreamWeeklyUsagePercent()
+		return nil
+	case apikey.FieldUpstreamWeeklyWindowStart:
+		m.ResetUpstreamWeeklyWindowStart()
+		return nil
+	case apikey.FieldUpstreamWeeklyObservedAt:
+		m.ResetUpstreamWeeklyObservedAt()
 		return nil
 	case apikey.FieldUsage5h:
 		m.ResetUsage5h()
@@ -22158,14 +22551,18 @@ type GroupMutation struct {
 	addsort_order                           *int
 	allow_messages_dispatch                 *bool
 	allow_live                              *bool
+	force_openai_fast                       *bool
+	free_openai_fast                        *bool
 	require_oauth_only                      *bool
 	require_privacy_set                     *bool
 	default_mapped_model                    *string
 	messages_dispatch_model_config          *domain.OpenAIMessagesDispatchModelConfig
 	models_list_config                      *domain.GroupModelsListConfig
+	codex_models_manifest_config            *domain.GroupCodexModelsManifestConfig
 	rpm_limit                               *int
 	addrpm_limit                            *int
 	max_reasoning_effort                    *string
+	max_reasoning_effort_over_limit         *string
 	reasoning_effort_mappings               *[]domain.ReasoningEffortMapping
 	appendreasoning_effort_mappings         []domain.ReasoningEffortMapping
 	profit_control_enabled                  *bool
@@ -24946,6 +25343,78 @@ func (m *GroupMutation) ResetAllowLive() {
 	m.allow_live = nil
 }
 
+// SetForceOpenaiFast sets the "force_openai_fast" field.
+func (m *GroupMutation) SetForceOpenaiFast(b bool) {
+	m.force_openai_fast = &b
+}
+
+// ForceOpenaiFast returns the value of the "force_openai_fast" field in the mutation.
+func (m *GroupMutation) ForceOpenaiFast() (r bool, exists bool) {
+	v := m.force_openai_fast
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldForceOpenaiFast returns the old "force_openai_fast" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldForceOpenaiFast(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldForceOpenaiFast is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldForceOpenaiFast requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldForceOpenaiFast: %w", err)
+	}
+	return oldValue.ForceOpenaiFast, nil
+}
+
+// ResetForceOpenaiFast resets all changes to the "force_openai_fast" field.
+func (m *GroupMutation) ResetForceOpenaiFast() {
+	m.force_openai_fast = nil
+}
+
+// SetFreeOpenaiFast sets the "free_openai_fast" field.
+func (m *GroupMutation) SetFreeOpenaiFast(b bool) {
+	m.free_openai_fast = &b
+}
+
+// FreeOpenaiFast returns the value of the "free_openai_fast" field in the mutation.
+func (m *GroupMutation) FreeOpenaiFast() (r bool, exists bool) {
+	v := m.free_openai_fast
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFreeOpenaiFast returns the old "free_openai_fast" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldFreeOpenaiFast(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFreeOpenaiFast is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFreeOpenaiFast requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFreeOpenaiFast: %w", err)
+	}
+	return oldValue.FreeOpenaiFast, nil
+}
+
+// ResetFreeOpenaiFast resets all changes to the "free_openai_fast" field.
+func (m *GroupMutation) ResetFreeOpenaiFast() {
+	m.free_openai_fast = nil
+}
+
 // SetRequireOauthOnly sets the "require_oauth_only" field.
 func (m *GroupMutation) SetRequireOauthOnly(b bool) {
 	m.require_oauth_only = &b
@@ -25126,6 +25595,42 @@ func (m *GroupMutation) ResetModelsListConfig() {
 	m.models_list_config = nil
 }
 
+// SetCodexModelsManifestConfig sets the "codex_models_manifest_config" field.
+func (m *GroupMutation) SetCodexModelsManifestConfig(dcmmc domain.GroupCodexModelsManifestConfig) {
+	m.codex_models_manifest_config = &dcmmc
+}
+
+// CodexModelsManifestConfig returns the value of the "codex_models_manifest_config" field in the mutation.
+func (m *GroupMutation) CodexModelsManifestConfig() (r domain.GroupCodexModelsManifestConfig, exists bool) {
+	v := m.codex_models_manifest_config
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCodexModelsManifestConfig returns the old "codex_models_manifest_config" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldCodexModelsManifestConfig(ctx context.Context) (v domain.GroupCodexModelsManifestConfig, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCodexModelsManifestConfig is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCodexModelsManifestConfig requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCodexModelsManifestConfig: %w", err)
+	}
+	return oldValue.CodexModelsManifestConfig, nil
+}
+
+// ResetCodexModelsManifestConfig resets all changes to the "codex_models_manifest_config" field.
+func (m *GroupMutation) ResetCodexModelsManifestConfig() {
+	m.codex_models_manifest_config = nil
+}
+
 // SetRpmLimit sets the "rpm_limit" field.
 func (m *GroupMutation) SetRpmLimit(i int) {
 	m.rpm_limit = &i
@@ -25216,6 +25721,42 @@ func (m *GroupMutation) OldMaxReasoningEffort(ctx context.Context) (v string, er
 // ResetMaxReasoningEffort resets all changes to the "max_reasoning_effort" field.
 func (m *GroupMutation) ResetMaxReasoningEffort() {
 	m.max_reasoning_effort = nil
+}
+
+// SetMaxReasoningEffortOverLimit sets the "max_reasoning_effort_over_limit" field.
+func (m *GroupMutation) SetMaxReasoningEffortOverLimit(s string) {
+	m.max_reasoning_effort_over_limit = &s
+}
+
+// MaxReasoningEffortOverLimit returns the value of the "max_reasoning_effort_over_limit" field in the mutation.
+func (m *GroupMutation) MaxReasoningEffortOverLimit() (r string, exists bool) {
+	v := m.max_reasoning_effort_over_limit
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMaxReasoningEffortOverLimit returns the old "max_reasoning_effort_over_limit" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldMaxReasoningEffortOverLimit(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMaxReasoningEffortOverLimit is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMaxReasoningEffortOverLimit requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMaxReasoningEffortOverLimit: %w", err)
+	}
+	return oldValue.MaxReasoningEffortOverLimit, nil
+}
+
+// ResetMaxReasoningEffortOverLimit resets all changes to the "max_reasoning_effort_over_limit" field.
+func (m *GroupMutation) ResetMaxReasoningEffortOverLimit() {
+	m.max_reasoning_effort_over_limit = nil
 }
 
 // SetReasoningEffortMappings sets the "reasoning_effort_mappings" field.
@@ -25860,7 +26401,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 64)
+	fields := make([]string, 0, 68)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -26014,6 +26555,12 @@ func (m *GroupMutation) Fields() []string {
 	if m.allow_live != nil {
 		fields = append(fields, group.FieldAllowLive)
 	}
+	if m.force_openai_fast != nil {
+		fields = append(fields, group.FieldForceOpenaiFast)
+	}
+	if m.free_openai_fast != nil {
+		fields = append(fields, group.FieldFreeOpenaiFast)
+	}
 	if m.require_oauth_only != nil {
 		fields = append(fields, group.FieldRequireOauthOnly)
 	}
@@ -26029,11 +26576,17 @@ func (m *GroupMutation) Fields() []string {
 	if m.models_list_config != nil {
 		fields = append(fields, group.FieldModelsListConfig)
 	}
+	if m.codex_models_manifest_config != nil {
+		fields = append(fields, group.FieldCodexModelsManifestConfig)
+	}
 	if m.rpm_limit != nil {
 		fields = append(fields, group.FieldRpmLimit)
 	}
 	if m.max_reasoning_effort != nil {
 		fields = append(fields, group.FieldMaxReasoningEffort)
+	}
+	if m.max_reasoning_effort_over_limit != nil {
+		fields = append(fields, group.FieldMaxReasoningEffortOverLimit)
 	}
 	if m.reasoning_effort_mappings != nil {
 		fields = append(fields, group.FieldReasoningEffortMappings)
@@ -26163,6 +26716,10 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.AllowMessagesDispatch()
 	case group.FieldAllowLive:
 		return m.AllowLive()
+	case group.FieldForceOpenaiFast:
+		return m.ForceOpenaiFast()
+	case group.FieldFreeOpenaiFast:
+		return m.FreeOpenaiFast()
 	case group.FieldRequireOauthOnly:
 		return m.RequireOauthOnly()
 	case group.FieldRequirePrivacySet:
@@ -26173,10 +26730,14 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.MessagesDispatchModelConfig()
 	case group.FieldModelsListConfig:
 		return m.ModelsListConfig()
+	case group.FieldCodexModelsManifestConfig:
+		return m.CodexModelsManifestConfig()
 	case group.FieldRpmLimit:
 		return m.RpmLimit()
 	case group.FieldMaxReasoningEffort:
 		return m.MaxReasoningEffort()
+	case group.FieldMaxReasoningEffortOverLimit:
+		return m.MaxReasoningEffortOverLimit()
 	case group.FieldReasoningEffortMappings:
 		return m.ReasoningEffortMappings()
 	case group.FieldProfitControlEnabled:
@@ -26300,6 +26861,10 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldAllowMessagesDispatch(ctx)
 	case group.FieldAllowLive:
 		return m.OldAllowLive(ctx)
+	case group.FieldForceOpenaiFast:
+		return m.OldForceOpenaiFast(ctx)
+	case group.FieldFreeOpenaiFast:
+		return m.OldFreeOpenaiFast(ctx)
 	case group.FieldRequireOauthOnly:
 		return m.OldRequireOauthOnly(ctx)
 	case group.FieldRequirePrivacySet:
@@ -26310,10 +26875,14 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMessagesDispatchModelConfig(ctx)
 	case group.FieldModelsListConfig:
 		return m.OldModelsListConfig(ctx)
+	case group.FieldCodexModelsManifestConfig:
+		return m.OldCodexModelsManifestConfig(ctx)
 	case group.FieldRpmLimit:
 		return m.OldRpmLimit(ctx)
 	case group.FieldMaxReasoningEffort:
 		return m.OldMaxReasoningEffort(ctx)
+	case group.FieldMaxReasoningEffortOverLimit:
+		return m.OldMaxReasoningEffortOverLimit(ctx)
 	case group.FieldReasoningEffortMappings:
 		return m.OldReasoningEffortMappings(ctx)
 	case group.FieldProfitControlEnabled:
@@ -26692,6 +27261,20 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAllowLive(v)
 		return nil
+	case group.FieldForceOpenaiFast:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetForceOpenaiFast(v)
+		return nil
+	case group.FieldFreeOpenaiFast:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFreeOpenaiFast(v)
+		return nil
 	case group.FieldRequireOauthOnly:
 		v, ok := value.(bool)
 		if !ok {
@@ -26727,6 +27310,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetModelsListConfig(v)
 		return nil
+	case group.FieldCodexModelsManifestConfig:
+		v, ok := value.(domain.GroupCodexModelsManifestConfig)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCodexModelsManifestConfig(v)
+		return nil
 	case group.FieldRpmLimit:
 		v, ok := value.(int)
 		if !ok {
@@ -26740,6 +27330,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetMaxReasoningEffort(v)
+		return nil
+	case group.FieldMaxReasoningEffortOverLimit:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMaxReasoningEffortOverLimit(v)
 		return nil
 	case group.FieldReasoningEffortMappings:
 		v, ok := value.([]domain.ReasoningEffortMapping)
@@ -27453,6 +28050,12 @@ func (m *GroupMutation) ResetField(name string) error {
 	case group.FieldAllowLive:
 		m.ResetAllowLive()
 		return nil
+	case group.FieldForceOpenaiFast:
+		m.ResetForceOpenaiFast()
+		return nil
+	case group.FieldFreeOpenaiFast:
+		m.ResetFreeOpenaiFast()
+		return nil
 	case group.FieldRequireOauthOnly:
 		m.ResetRequireOauthOnly()
 		return nil
@@ -27468,11 +28071,17 @@ func (m *GroupMutation) ResetField(name string) error {
 	case group.FieldModelsListConfig:
 		m.ResetModelsListConfig()
 		return nil
+	case group.FieldCodexModelsManifestConfig:
+		m.ResetCodexModelsManifestConfig()
+		return nil
 	case group.FieldRpmLimit:
 		m.ResetRpmLimit()
 		return nil
 	case group.FieldMaxReasoningEffort:
 		m.ResetMaxReasoningEffort()
+		return nil
+	case group.FieldMaxReasoningEffortOverLimit:
+		m.ResetMaxReasoningEffortOverLimit()
 		return nil
 	case group.FieldReasoningEffortMappings:
 		m.ResetReasoningEffortMappings()

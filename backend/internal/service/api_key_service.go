@@ -38,9 +38,11 @@ var (
 	ErrAPIKeyQuotaExhausted = infraerrors.TooManyRequests("API_KEY_QUOTA_EXHAUSTED", "api key 额度已用完")
 
 	// Rate limit errors
-	ErrAPIKeyRateLimit5hExceeded = infraerrors.TooManyRequests("API_KEY_RATE_5H_EXCEEDED", "api key 5小时限额已用完")
-	ErrAPIKeyRateLimit1dExceeded = infraerrors.TooManyRequests("API_KEY_RATE_1D_EXCEEDED", "api key 日限额已用完")
-	ErrAPIKeyRateLimit7dExceeded = infraerrors.TooManyRequests("API_KEY_RATE_7D_EXCEEDED", "api key 7天限额已用完")
+	ErrAPIKeyRateLimit5hExceeded       = infraerrors.TooManyRequests("API_KEY_RATE_5H_EXCEEDED", "api key 5小时限额已用完")
+	ErrAPIKeyRateLimit1dExceeded       = infraerrors.TooManyRequests("API_KEY_RATE_1D_EXCEEDED", "api key 日限额已用完")
+	ErrAPIKeyRateLimit7dExceeded       = infraerrors.TooManyRequests("API_KEY_RATE_7D_EXCEEDED", "api key 7天限额已用完")
+	ErrAPIKeyUpstreamWeeklyExceeded    = infraerrors.TooManyRequests("API_KEY_UPSTREAM_WEEKLY_EXCEEDED", "API Key 上游周配额已用完，请等待上游周重置")
+	ErrAPIKeyUpstreamWeeklyUnavailable = infraerrors.ServiceUnavailable("API_KEY_UPSTREAM_WEEKLY_UNAVAILABLE", "上游周配额正在同步，请稍后重试")
 )
 
 const (
@@ -72,7 +74,8 @@ type APIKeyUpdateFields struct {
 	RateLimits bool
 	// RateLimitUsage 覆盖 usage_5h/_1d/_7d 与三个窗口起点，
 	// 仅供"重置限流用量"路径声明；常规计费走 IncrementRateLimitUsage。
-	RateLimitUsage bool
+	RateLimitUsage      bool
+	UpstreamWeeklyLimit bool
 	// IPRules 覆盖 ip_whitelist 与 ip_blacklist。
 	IPRules bool
 }
@@ -127,12 +130,15 @@ type apiKeyAllByUserIDLister interface {
 
 // APIKeyRateLimitData holds rate limit usage and window state for an API key.
 type APIKeyRateLimitData struct {
-	Usage5h       float64
-	Usage1d       float64
-	Usage7d       float64
-	Window5hStart *time.Time
-	Window1dStart *time.Time
-	Window7dStart *time.Time
+	UpstreamWeeklyUsagePercent float64
+	UpstreamWeeklyWindowStart  *time.Time
+	UpstreamWeeklyObservedAt   *time.Time
+	Usage5h                    float64
+	Usage1d                    float64
+	Usage7d                    float64
+	Window5hStart              *time.Time
+	Window1dStart              *time.Time
+	Window7dStart              *time.Time
 }
 
 // EffectiveUsage5h returns the 5h window usage, or 0 if the window has expired.
@@ -240,10 +246,11 @@ type UpdateAPIKeyRequest struct {
 	ResetQuota      *bool      `json:"reset_quota"` // Reset quota_used to 0
 
 	// Rate limit fields (nil = no change, 0 = unlimited)
-	RateLimit5h         *float64 `json:"rate_limit_5h"`
-	RateLimit1d         *float64 `json:"rate_limit_1d"`
-	RateLimit7d         *float64 `json:"rate_limit_7d"`
-	ResetRateLimitUsage *bool    `json:"reset_rate_limit_usage"` // Reset all usage counters to 0
+	RateLimit5h                *float64 `json:"rate_limit_5h"`
+	RateLimit1d                *float64 `json:"rate_limit_1d"`
+	RateLimit7d                *float64 `json:"rate_limit_7d"`
+	ResetRateLimitUsage        *bool    `json:"reset_rate_limit_usage"` // Reset all usage counters to 0
+	UpstreamWeeklyLimitPercent *float64 `json:"upstream_weekly_limit_percent"`
 }
 
 func validateAPIKeyLimit(v float64) error {
@@ -870,6 +877,20 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 	}
 
 	// Update rate limit configuration
+	if req.UpstreamWeeklyLimitPercent != nil {
+		if apiKey.User == nil || apiKey.User.Role != RoleAdmin {
+			return nil, ErrInsufficientPerms
+		}
+		limit := *req.UpstreamWeeklyLimitPercent
+		if err := validateAPIKeyLimit(limit); err != nil {
+			return nil, err
+		}
+		if limit > 100 {
+			return nil, infraerrors.BadRequest("API_KEY_LIMIT_INVALID", "upstream weekly share must be between 0 and 100")
+		}
+		apiKey.UpstreamWeeklyLimitPercent = limit
+		fields.UpstreamWeeklyLimit = true
+	}
 	if req.RateLimit5h != nil {
 		apiKey.RateLimit5h = *req.RateLimit5h
 		fields.RateLimits = true
@@ -884,6 +905,8 @@ func (s *APIKeyService) Update(ctx context.Context, id int64, userID int64, req 
 	}
 	resetRateLimit := req.ResetRateLimitUsage != nil && *req.ResetRateLimitUsage
 	if resetRateLimit {
+		resetAt := time.Now().UTC()
+		apiKey.RateLimitResetAt = &resetAt
 		apiKey.Usage5h = 0
 		apiKey.Usage1d = 0
 		apiKey.Usage7d = 0

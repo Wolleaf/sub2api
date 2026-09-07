@@ -3,9 +3,9 @@ name: Custom OAuth Fast image
 on:
   push:
     branches:
-      - feat/openai-model-auto-sync-v0.1.185
+      - fix/quota-consistency-v0.2.1
     tags:
-      - custom-v0.1.185-oauth-fast.*
+      - custom-v0.2.1-quota.*
   workflow_dispatch:
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/wolleaf/sub2api
-  CUSTOM_VERSION: 0.1.185-oauth-fast.8
+  CUSTOM_VERSION: 0.2.1-quota.1
 
 jobs:
   build:

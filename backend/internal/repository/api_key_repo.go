@@ -55,7 +55,8 @@ func (r *apiKeyRepository) Create(ctx context.Context, key *service.APIKey) erro
 		SetNillableExpiresAt(key.ExpiresAt).
 		SetRateLimit5h(key.RateLimit5h).
 		SetRateLimit1d(key.RateLimit1d).
-		SetRateLimit7d(key.RateLimit7d)
+		SetRateLimit7d(key.RateLimit7d).
+		SetUpstreamWeeklyLimitPercent(key.UpstreamWeeklyLimitPercent)
 
 	if len(key.IPWhitelist) > 0 {
 		builder.SetIPWhitelist(key.IPWhitelist)
@@ -144,6 +145,7 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 			apikey.FieldRateLimit5h,
 			apikey.FieldRateLimit1d,
 			apikey.FieldRateLimit7d,
+			apikey.FieldUpstreamWeeklyLimitPercent,
 		).
 		WithUser(func(q *dbent.UserQuery) {
 			q.Select(
@@ -212,11 +214,15 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 				group.FieldSupportedModelScopes,
 				group.FieldAllowMessagesDispatch,
 				group.FieldAllowLive,
+				group.FieldForceOpenaiFast,
+				group.FieldFreeOpenaiFast,
 				group.FieldDefaultMappedModel,
 				group.FieldMessagesDispatchModelConfig,
 				group.FieldModelsListConfig,
+				group.FieldCodexModelsManifestConfig,
 				group.FieldRpmLimit,
 				group.FieldMaxReasoningEffort,
+				group.FieldMaxReasoningEffortOverLimit,
 				group.FieldReasoningEffortMappings,
 				group.FieldPeakRateEnabled,
 				group.FieldPeakStart,
@@ -275,6 +281,7 @@ func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey, fiel
 			SetRateLimit7d(key.RateLimit7d)
 	}
 	if fields.RateLimitUsage {
+		builder.SetNillableRateLimitResetAt(key.RateLimitResetAt)
 		builder.
 			SetUsage5h(key.Usage5h).
 			SetUsage1d(key.Usage1d).
@@ -296,6 +303,9 @@ func (r *apiKeyRepository) Update(ctx context.Context, key *service.APIKey, fiel
 		} else {
 			builder.ClearWindow7dStart()
 		}
+	}
+	if fields.UpstreamWeeklyLimit {
+		builder.SetUpstreamWeeklyLimitPercent(key.UpstreamWeeklyLimitPercent)
 	}
 	if fields.GroupID {
 		if key.GroupID != nil {
@@ -844,7 +854,8 @@ func (r *apiKeyRepository) ResetRateLimitWindows(ctx context.Context, id int64) 
 // GetRateLimitData returns the current rate limit usage and window start times for an API key.
 func (r *apiKeyRepository) GetRateLimitData(ctx context.Context, id int64) (result *service.APIKeyRateLimitData, err error) {
 	rows, err := r.sql.QueryContext(ctx, `
-		SELECT usage_5h, usage_1d, usage_7d, window_5h_start, window_1d_start, window_7d_start
+		SELECT usage_5h, usage_1d, usage_7d, window_5h_start, window_1d_start, window_7d_start,
+		       upstream_weekly_usage_percent, upstream_weekly_window_start, upstream_weekly_observed_at
 		FROM api_keys
 		WHERE id = $1 AND deleted_at IS NULL`,
 		id)
@@ -860,7 +871,7 @@ func (r *apiKeyRepository) GetRateLimitData(ctx context.Context, id int64) (resu
 		return nil, service.ErrAPIKeyNotFound
 	}
 	data := &service.APIKeyRateLimitData{}
-	if err := rows.Scan(&data.Usage5h, &data.Usage1d, &data.Usage7d, &data.Window5hStart, &data.Window1dStart, &data.Window7dStart); err != nil {
+	if err := rows.Scan(&data.Usage5h, &data.Usage1d, &data.Usage7d, &data.Window5hStart, &data.Window1dStart, &data.Window7dStart, &data.UpstreamWeeklyUsagePercent, &data.UpstreamWeeklyWindowStart, &data.UpstreamWeeklyObservedAt); err != nil {
 		return nil, err
 	}
 	return data, rows.Err()
@@ -871,29 +882,34 @@ func apiKeyEntityToService(m *dbent.APIKey) *service.APIKey {
 		return nil
 	}
 	out := &service.APIKey{
-		ID:            m.ID,
-		UserID:        m.UserID,
-		Key:           m.Key,
-		Name:          m.Name,
-		Status:        m.Status,
-		IPWhitelist:   m.IPWhitelist,
-		IPBlacklist:   m.IPBlacklist,
-		LastUsedAt:    m.LastUsedAt,
-		CreatedAt:     m.CreatedAt,
-		UpdatedAt:     m.UpdatedAt,
-		GroupID:       m.GroupID,
-		Quota:         m.Quota,
-		QuotaUsed:     m.QuotaUsed,
-		ExpiresAt:     m.ExpiresAt,
-		RateLimit5h:   m.RateLimit5h,
-		RateLimit1d:   m.RateLimit1d,
-		RateLimit7d:   m.RateLimit7d,
-		Usage5h:       m.Usage5h,
-		Usage1d:       m.Usage1d,
-		Usage7d:       m.Usage7d,
-		Window5hStart: m.Window5hStart,
-		Window1dStart: m.Window1dStart,
-		Window7dStart: m.Window7dStart,
+		ID:                         m.ID,
+		UserID:                     m.UserID,
+		Key:                        m.Key,
+		Name:                       m.Name,
+		Status:                     m.Status,
+		IPWhitelist:                m.IPWhitelist,
+		IPBlacklist:                m.IPBlacklist,
+		LastUsedAt:                 m.LastUsedAt,
+		CreatedAt:                  m.CreatedAt,
+		UpdatedAt:                  m.UpdatedAt,
+		GroupID:                    m.GroupID,
+		Quota:                      m.Quota,
+		QuotaUsed:                  m.QuotaUsed,
+		ExpiresAt:                  m.ExpiresAt,
+		RateLimit5h:                m.RateLimit5h,
+		RateLimit1d:                m.RateLimit1d,
+		RateLimit7d:                m.RateLimit7d,
+		Usage5h:                    m.Usage5h,
+		Usage1d:                    m.Usage1d,
+		Usage7d:                    m.Usage7d,
+		Window5hStart:              m.Window5hStart,
+		Window1dStart:              m.Window1dStart,
+		Window7dStart:              m.Window7dStart,
+		RateLimitResetAt:           m.RateLimitResetAt,
+		UpstreamWeeklyLimitPercent: m.UpstreamWeeklyLimitPercent,
+		UpstreamWeeklyUsagePercent: m.UpstreamWeeklyUsagePercent,
+		UpstreamWeeklyWindowStart:  m.UpstreamWeeklyWindowStart,
+		UpstreamWeeklyObservedAt:   m.UpstreamWeeklyObservedAt,
 	}
 	if m.Edges.User != nil {
 		out.User = userEntityToService(m.Edges.User)
@@ -976,8 +992,6 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 		DailyLimitUSD:                    g.DailyLimitUsd,
 		WeeklyLimitUSD:                   g.WeeklyLimitUsd,
 		MonthlyLimitUSD:                  g.MonthlyLimitUsd,
-		WeeklyRateLimitBypassEnabled:     g.WeeklyRateLimitBypassEnabled,
-		WeeklyRateLimitBypassWindowStart: g.WeeklyRateLimitBypassWindowStart,
 		AllowImageGeneration:             g.AllowImageGeneration,
 		AllowBatchImageGeneration:        g.AllowBatchImageGeneration,
 		ImageRateIndependent:             g.ImageRateIndependent,
@@ -1011,13 +1025,17 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 		SortOrder:                        g.SortOrder,
 		AllowMessagesDispatch:            g.AllowMessagesDispatch,
 		AllowLive:                        g.AllowLive,
+		ForceOpenAIFast:                  g.ForceOpenaiFast,
+		FreeOpenAIFast:                   g.FreeOpenaiFast,
 		RequireOAuthOnly:                 g.RequireOauthOnly,
 		RequirePrivacySet:                g.RequirePrivacySet,
 		DefaultMappedModel:               g.DefaultMappedModel,
 		MessagesDispatchModelConfig:      g.MessagesDispatchModelConfig,
 		ModelsListConfig:                 g.ModelsListConfig,
+		CodexModelsManifestConfig:        g.CodexModelsManifestConfig,
 		RPMLimit:                         g.RpmLimit,
 		MaxReasoningEffort:               g.MaxReasoningEffort,
+		MaxReasoningEffortOverLimit:      g.MaxReasoningEffortOverLimit,
 		ReasoningEffortMappings:          g.ReasoningEffortMappings,
 		PeakRateEnabled:                  g.PeakRateEnabled,
 		PeakStart:                        g.PeakStart,
@@ -1028,6 +1046,8 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 		ProfitSafetyBuffer:               g.ProfitSafetyBuffer,
 		CreatedAt:                        g.CreatedAt,
 		UpdatedAt:                        g.UpdatedAt,
+		WeeklyRateLimitBypassEnabled:     g.WeeklyRateLimitBypassEnabled,
+		WeeklyRateLimitBypassWindowStart: g.WeeklyRateLimitBypassWindowStart,
 	}
 }
 

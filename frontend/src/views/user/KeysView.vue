@@ -230,7 +230,8 @@
           </template>
 
           <template #cell-rate_limit="{ row }">
-            <div v-if="row.rate_limit_5h > 0 || row.rate_limit_1d > 0 || row.rate_limit_7d > 0" class="space-y-1.5 min-w-[140px]">
+            <div v-if="row.rate_limit_5h > 0 || row.rate_limit_1d > 0 || row.rate_limit_7d > 0 || (row.upstream_weekly_limit_percent ?? 0) > 0" class="space-y-1.5 min-w-[140px]">
+              <UpstreamWeeklyQuotaCard v-if="(row.upstream_weekly_limit_percent ?? 0) > 0" :quota="row" />
               <!-- 5h window -->
               <div v-if="row.rate_limit_5h > 0">
                 <div class="flex items-center justify-between text-xs">
@@ -288,7 +289,7 @@
                 </div>
               </div>
               <!-- 7d window -->
-              <div v-if="row.rate_limit_7d > 0">
+              <div v-if="row.rate_limit_7d > 0 && !(row.upstream_weekly_limit_percent ?? 0)">
                 <div class="flex items-center justify-between text-xs">
                   <span class="text-gray-500 dark:text-gray-400">7d</span>
                   <span :class="[
@@ -317,7 +318,7 @@
               </div>
               <!-- Reset button -->
               <button
-                v-if="row.usage_5h > 0 || row.usage_1d > 0 || row.usage_7d > 0"
+                v-if="!row.upstream_weekly_limit_percent && (row.usage_5h > 0 || row.usage_1d > 0 || row.usage_7d > 0)"
                 @click.stop="confirmResetRateLimitFromTable(row)"
                 class="mt-0.5 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-gray-500 transition-colors hover:bg-gray-100 hover:text-primary-600 dark:hover:bg-dark-700 dark:hover:text-primary-400"
                 :title="t('keys.resetRateLimitUsage')"
@@ -777,7 +778,8 @@
             </div>
 
             <!-- 7-Day Limit -->
-            <div>
+            <UpstreamWeeklyQuotaCard v-if="selectedKey && (selectedKey.upstream_weekly_limit_percent ?? 0) > 0" :quota="selectedKey" details />
+            <div v-else>
               <label class="input-label">{{ t('keys.rateLimit7d') }}</label>
               <div class="relative">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
@@ -823,7 +825,7 @@
             </div>
 
             <!-- Reset Rate Limit button (edit mode only) -->
-            <div v-if="showEditModal && selectedKey && (selectedKey.rate_limit_5h > 0 || selectedKey.rate_limit_1d > 0 || selectedKey.rate_limit_7d > 0)">
+            <div v-if="showEditModal && selectedKey && !selectedKey.upstream_weekly_limit_percent && (selectedKey.rate_limit_5h > 0 || selectedKey.rate_limit_1d > 0 || selectedKey.rate_limit_7d > 0)">
               <button
                 type="button"
                 @click="confirmResetRateLimit"
@@ -1137,6 +1139,7 @@ import TablePageLayout from '@/components/layout/TablePageLayout.vue'
 	import SearchInput from '@/components/common/SearchInput.vue'
 	import Icon from '@/components/icons/Icon.vue'
 	import UseKeyModal from '@/components/keys/UseKeyModal.vue'
+	import UpstreamWeeklyQuotaCard from '@/components/keys/UpstreamWeeklyQuotaCard.vue'
 	import EndpointPopover from '@/components/keys/EndpointPopover.vue'
 	import GroupBadge from '@/components/common/GroupBadge.vue'
 	import GroupOptionItem from '@/components/common/GroupOptionItem.vue'

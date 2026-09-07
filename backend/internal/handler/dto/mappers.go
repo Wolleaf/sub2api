@@ -82,33 +82,37 @@ func APIKeyFromService(k *service.APIKey) *APIKey {
 		return nil
 	}
 	out := &APIKey{
-		ID:                 k.ID,
-		UserID:             k.UserID,
-		Key:                k.Key,
-		Name:               k.Name,
-		GroupID:            k.GroupID,
-		Status:             k.Status,
-		IPWhitelist:        k.IPWhitelist,
-		IPBlacklist:        k.IPBlacklist,
-		LastUsedAt:         k.LastUsedAt,
-		LastUsedIP:         k.LastUsedIP,
-		Quota:              k.Quota,
-		QuotaUsed:          k.QuotaUsed,
-		ExpiresAt:          k.ExpiresAt,
-		CreatedAt:          k.CreatedAt,
-		UpdatedAt:          k.UpdatedAt,
-		CurrentConcurrency: k.CurrentConcurrency,
-		RateLimit5h:        k.RateLimit5h,
-		RateLimit1d:        k.RateLimit1d,
-		RateLimit7d:        k.RateLimit7d,
-		Usage5h:            k.EffectiveUsage5h(),
-		Usage1d:            k.EffectiveUsage1d(),
-		Usage7d:            k.EffectiveUsage7d(),
-		Window5hStart:      k.Window5hStart,
-		Window1dStart:      k.Window1dStart,
-		Window7dStart:      k.Window7dStart,
-		User:               UserFromServiceShallow(k.User),
-		Group:              GroupFromServiceShallow(k.Group),
+		ID:                         k.ID,
+		UserID:                     k.UserID,
+		Key:                        k.Key,
+		Name:                       k.Name,
+		GroupID:                    k.GroupID,
+		Status:                     k.Status,
+		IPWhitelist:                k.IPWhitelist,
+		IPBlacklist:                k.IPBlacklist,
+		LastUsedAt:                 k.LastUsedAt,
+		LastUsedIP:                 k.LastUsedIP,
+		Quota:                      k.Quota,
+		QuotaUsed:                  k.QuotaUsed,
+		ExpiresAt:                  k.ExpiresAt,
+		CreatedAt:                  k.CreatedAt,
+		UpdatedAt:                  k.UpdatedAt,
+		CurrentConcurrency:         k.CurrentConcurrency,
+		RateLimit5h:                k.RateLimit5h,
+		RateLimit1d:                k.RateLimit1d,
+		RateLimit7d:                k.RateLimit7d,
+		Usage5h:                    k.EffectiveUsage5h(),
+		Usage1d:                    k.EffectiveUsage1d(),
+		Usage7d:                    k.EffectiveUsage7d(),
+		Window5hStart:              k.Window5hStart,
+		Window1dStart:              k.Window1dStart,
+		Window7dStart:              k.Window7dStart,
+		UpstreamWeeklyLimitPercent: k.UpstreamWeeklyLimitPercent,
+		UpstreamWeeklyUsagePercent: k.UpstreamWeeklyUsagePercent,
+		UpstreamWeeklyWindowStart:  k.UpstreamWeeklyWindowStart,
+		UpstreamWeeklyObservedAt:   k.UpstreamWeeklyObservedAt,
+		User:                       UserFromServiceShallow(k.User),
+		Group:                      GroupFromServiceShallow(k.Group),
 	}
 	if k.Window5hStart != nil && !service.IsWindowExpired(k.Window5hStart, service.RateLimitWindow5h) {
 		t := k.Window5hStart.Add(service.RateLimitWindow5h)
@@ -147,6 +151,9 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 		return nil
 	}
 	out := &AdminGroup{
+		ForceOpenAIFast:                  g.ForceOpenAIFast,
+		FreeOpenAIFast:                   g.FreeOpenAIFast,
+		CodexModelsManifestConfig:        g.CodexModelsManifestConfig,
 		Group:                            groupFromServiceBase(g),
 		ProfitControlEnabled:             g.ProfitControlEnabled,
 		ProfitMinMargin:                  g.ProfitMinMargin,
@@ -227,6 +234,7 @@ func groupFromServiceBase(g *service.Group) Group {
 		RequirePrivacySet:               g.RequirePrivacySet,
 		RPMLimit:                        g.RPMLimit,
 		MaxReasoningEffort:              g.MaxReasoningEffort,
+		MaxReasoningEffortOverLimit:     g.MaxReasoningEffortOverLimit,
 		ReasoningEffortMappings:         g.ReasoningEffortMappings,
 		CreatedAt:                       g.CreatedAt,
 		UpdatedAt:                       g.UpdatedAt,
@@ -448,6 +456,47 @@ func AccountFromService(a *service.Account) *Account {
 		}
 	}
 	return out
+}
+
+// AccountListItemFromAccount projects a full account response into the
+// compact shape used by the paginated admin account list. Keeping this
+// projection separate from Account preserves the existing detail API.
+func AccountListItemFromAccount(a *Account) *AccountListItem {
+	if a == nil {
+		return nil
+	}
+	return &AccountListItem{
+		ID: a.ID, Name: a.Name, Notes: a.Notes, Platform: a.Platform, Type: a.Type,
+		Credentials: a.Credentials, CredentialsStatus: a.CredentialsStatus, Extra: a.Extra,
+		OllamaCloudUsage: a.OllamaCloudUsage,
+		ProxyID:          a.ProxyID, ProxyFallbackOriginID: a.ProxyFallbackOriginID, ProxyFallbackOriginName: a.ProxyFallbackOriginName,
+		Concurrency: a.Concurrency, LoadFactor: a.LoadFactor, Priority: a.Priority, RateMultiplier: a.RateMultiplier,
+		Status: a.Status, ErrorMessage: a.ErrorMessage, LastUsedAt: a.LastUsedAt, ExpiresAt: a.ExpiresAt,
+		AutoPauseOnExpired: a.AutoPauseOnExpired, CreatedAt: a.CreatedAt, UpdatedAt: a.UpdatedAt,
+		Schedulable: a.Schedulable, RateLimitedAt: a.RateLimitedAt, RateLimitResetAt: a.RateLimitResetAt,
+		OverloadUntil: a.OverloadUntil, TempUnschedulableUntil: a.TempUnschedulableUntil,
+		TempUnschedulableReason: a.TempUnschedulableReason, SessionWindowStart: a.SessionWindowStart,
+		SessionWindowEnd: a.SessionWindowEnd, SessionWindowStatus: a.SessionWindowStatus,
+		WindowCostLimit: a.WindowCostLimit, WindowCostStickyReserve: a.WindowCostStickyReserve,
+		MaxSessions: a.MaxSessions, SessionIdleTimeoutMin: a.SessionIdleTimeoutMin, BaseRPM: a.BaseRPM,
+		RPMStrategy: a.RPMStrategy, RPMStickyBuffer: a.RPMStickyBuffer, UserMsgQueueMode: a.UserMsgQueueMode,
+		EnableTLSFingerprint: a.EnableTLSFingerprint, TLSFingerprintProfileID: a.TLSFingerprintProfileID,
+		EnableSessionIDMasking: a.EnableSessionIDMasking, CacheTTLOverrideEnabled: a.CacheTTLOverrideEnabled,
+		CacheTTLOverrideTarget: a.CacheTTLOverrideTarget, CustomBaseURLEnabled: a.CustomBaseURLEnabled,
+		CustomBaseURL: a.CustomBaseURL, QuotaLimit: a.QuotaLimit, QuotaUsed: a.QuotaUsed,
+		QuotaDailyLimit: a.QuotaDailyLimit, QuotaDailyUsed: a.QuotaDailyUsed, QuotaWeeklyLimit: a.QuotaWeeklyLimit,
+		QuotaWeeklyUsed: a.QuotaWeeklyUsed, QuotaDailyResetMode: a.QuotaDailyResetMode,
+		QuotaDailyResetHour: a.QuotaDailyResetHour, QuotaWeeklyResetMode: a.QuotaWeeklyResetMode,
+		QuotaWeeklyResetDay: a.QuotaWeeklyResetDay, QuotaWeeklyResetHour: a.QuotaWeeklyResetHour,
+		QuotaResetTimezone: a.QuotaResetTimezone, QuotaDailyResetAt: a.QuotaDailyResetAt,
+		QuotaWeeklyResetAt: a.QuotaWeeklyResetAt, QuotaNotifyDailyEnabled: a.QuotaNotifyDailyEnabled,
+		QuotaNotifyDailyThreshold: a.QuotaNotifyDailyThreshold, QuotaNotifyWeeklyEnabled: a.QuotaNotifyWeeklyEnabled,
+		QuotaNotifyWeeklyThreshold: a.QuotaNotifyWeeklyThreshold, QuotaNotifyTotalEnabled: a.QuotaNotifyTotalEnabled,
+		QuotaNotifyTotalThreshold: a.QuotaNotifyTotalThreshold, ParentAccountID: a.ParentAccountID,
+		QuotaDimension: a.QuotaDimension, ParentEmail: a.ParentEmail, ParentPlanType: a.ParentPlanType,
+		ParentPrivacyMode: a.ParentPrivacyMode, ParentSubscriptionExpiresAt: a.ParentSubscriptionExpiresAt,
+		ParentChatGPTAccountID: a.ParentChatGPTAccountID, Proxy: a.Proxy, GroupIDs: a.GroupIDs,
+	}
 }
 
 func timeToUnixSeconds(value *time.Time) *int64 {
@@ -726,6 +775,7 @@ func UsageLogFromServiceAdmin(l *service.UsageLog) *AdminUsageLog {
 		UpstreamModelMismatch:   l.UpstreamModelMismatch,
 		ChannelID:               l.ChannelID,
 		ModelMappingChain:       l.ModelMappingChain,
+		UpstreamRequestID:       l.UpstreamRequestID,
 		BillingTier:             l.BillingTier,
 		AccountRateMultiplier:   l.AccountRateMultiplier,
 		AccountStatsCost:        l.AccountStatsCost,

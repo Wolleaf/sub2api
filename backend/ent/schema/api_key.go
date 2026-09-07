@@ -90,6 +90,14 @@ func (APIKey) Fields() []ent.Field {
 			Default(0).
 			Comment("Rate limit in USD per 7 days (0 = unlimited)"),
 		// Rate limit usage tracking
+		field.Time("rate_limit_reset_at").Optional().Nillable().
+			Comment("Manual dollar-counter reset baseline; independent of the upstream week"),
+		field.Float("upstream_weekly_limit_percent").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,6)"}).Default(0),
+		field.Float("upstream_weekly_usage_percent").
+			SchemaType(map[string]string{dialect.Postgres: "decimal(10,6)"}).Default(0),
+		field.Time("upstream_weekly_window_start").Optional().Nillable(),
+		field.Time("upstream_weekly_observed_at").Optional().Nillable(),
 		field.Float("usage_5h").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
 			Default(0).

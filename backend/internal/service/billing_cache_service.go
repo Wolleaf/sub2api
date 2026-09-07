@@ -573,6 +573,25 @@ func (s *BillingCacheService) InvalidateAPIKeyRateLimit(ctx context.Context, key
 // resets expired windows in-memory and triggers async DB reset,
 // and returns an error if any window limit is exceeded.
 func (s *BillingCacheService) checkAPIKeyRateLimits(ctx context.Context, apiKey *APIKey) error {
+	if apiKey.EffectiveUpstreamWeeklyLimitPercent() > 0 {
+		// Shares are written by the upstream observer, never by dollar billing.
+		// Read the small primary-key row directly so cache lag cannot restore an
+		// old allowance. This also fails closed while initialization/topology or
+		// upstream observations are unavailable.
+		if s.apiKeyRateLimitLoader == nil {
+			return ErrAPIKeyUpstreamWeeklyUnavailable
+		}
+		data, err := s.apiKeyRateLimitLoader.GetRateLimitData(ctx, apiKey.ID)
+		if err != nil {
+			return ErrAPIKeyUpstreamWeeklyUnavailable
+		}
+		if err := checkUpstreamWeeklyQuota(apiKey, data, time.Now()); err != nil {
+			return err
+		}
+		if apiKey.RateLimit5h <= 0 && apiKey.RateLimit1d <= 0 {
+			return nil
+		}
+	}
 	if s.cache == nil {
 		// No cache: fall back to reading from DB directly
 		if s.apiKeyRateLimitLoader == nil {
@@ -629,6 +648,25 @@ func (s *BillingCacheService) checkAPIKeyRateLimits(ctx context.Context, apiKey 
 		w7d = &t
 	}
 	return s.evaluateRateLimits(ctx, apiKey, cacheData.Usage5h, cacheData.Usage1d, cacheData.Usage7d, w5h, w1d, w7d)
+}
+
+func checkUpstreamWeeklyQuota(key *APIKey, data *APIKeyRateLimitData, now time.Time) error {
+	limit := key.EffectiveUpstreamWeeklyLimitPercent()
+	if limit <= 0 {
+		return nil
+	}
+	if data == nil || data.UpstreamWeeklyObservedAt == nil || data.UpstreamWeeklyWindowStart == nil ||
+		now.Sub(*data.UpstreamWeeklyObservedAt) > 10*time.Minute ||
+		data.UpstreamWeeklyObservedAt.After(now.Add(time.Minute)) {
+		return ErrAPIKeyUpstreamWeeklyUnavailable
+	}
+	if !now.Before(data.UpstreamWeeklyWindowStart.Add(RateLimitWindow7d)) {
+		return ErrAPIKeyUpstreamWeeklyUnavailable // await a confirmed new upstream window
+	}
+	if data.UpstreamWeeklyUsagePercent >= limit {
+		return ErrAPIKeyUpstreamWeeklyExceeded
+	}
+	return nil
 }
 
 // evaluateRateLimits checks usage against limits, triggering async resets for expired windows.

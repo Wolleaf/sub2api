@@ -21,6 +21,7 @@ func TestShouldApplyOpenAIOAuthFastPricing(t *testing.T) {
 		tier    string
 		want    bool
 	}{
+		{name: "gpt-6 astra", account: oauth, model: "gpt-6-astra", tier: "priority", want: true},
 		{name: "gpt-5.6 sol", account: oauth, model: "gpt-5.6-sol", tier: "priority", want: true},
 		{name: "gpt-5.6 terra alias", account: oauth, model: "openai/gpt_5.6_terra_high", tier: " PRIORITY ", want: true},
 		{name: "gpt-5.6 luna alias", account: oauth, model: "gpt5.6-luna-openai-compact", tier: "priority", want: true},

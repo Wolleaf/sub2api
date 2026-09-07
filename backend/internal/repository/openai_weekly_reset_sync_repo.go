@@ -28,6 +28,7 @@ type openAIWeeklyCounterRow struct {
 	id          int64
 	usage       float64
 	windowStart sql.NullTime
+	resetAt     sql.NullTime
 }
 
 func NewOpenAIWeeklyResetSyncRepository(db *sql.DB) service.OpenAIWeeklyResetSyncRepository {
@@ -349,7 +350,7 @@ func countWeeklyLimitedAPIKeys(ctx context.Context, queryer weeklyLimitedAPIKeyC
 		WHERE group_id = $1
 			AND deleted_at IS NULL
 			AND status = $2
-			AND rate_limit_7d > 0
+			AND (rate_limit_7d > 0 OR upstream_weekly_limit_percent > 0)
 	`, groupID, service.StatusAPIKeyActive).Scan(&count)
 	return count, err
 }
@@ -550,7 +551,7 @@ func (r *openAIWeeklyResetSyncRepository) reconcileAPIKeys(
 	result *service.OpenAIWeeklyResetReconcileResult,
 ) error {
 	rows, err := tx.QueryContext(ctx, `
-		SELECT id, usage_7d::float8, window_7d_start
+		SELECT id, usage_7d::float8, window_7d_start, rate_limit_reset_at
 		FROM api_keys
 		WHERE group_id = $1 AND deleted_at IS NULL
 		ORDER BY id
@@ -562,7 +563,7 @@ func (r *openAIWeeklyResetSyncRepository) reconcileAPIKeys(
 	keys := make([]openAIWeeklyCounterRow, 0)
 	for rows.Next() {
 		var key openAIWeeklyCounterRow
-		if err := rows.Scan(&key.id, &key.usage, &key.windowStart); err != nil {
+		if err := rows.Scan(&key.id, &key.usage, &key.windowStart, &key.resetAt); err != nil {
 			_ = rows.Close()
 			return err
 		}
@@ -596,7 +597,7 @@ func (r *openAIWeeklyResetSyncRepository) reconcileAPIKey(ctx context.Context, t
 	if currentStart != nil && service.OpenAIWeeklyWindowsEquivalent(*currentStart, windowStart) {
 		return false, nil
 	}
-	historyCost, err := sumWeeklyResetUsage(ctx, tx, "api_key_id", key.id, currentStart, windowStart)
+	historyCost, err := sumWeeklyResetUsage(ctx, tx, "api_key_id", key.id, currentStart, windowStart, nullTimePointer(key.resetAt))
 	if err != nil {
 		return false, err
 	}
@@ -679,7 +680,11 @@ func (r *openAIWeeklyResetSyncRepository) reconcileSubscriptions(
 // sumWeeklyResetUsage returns the immutable-log amount between the local and
 // upstream boundaries. When the local boundary is nil, it returns all usage at
 // or after the upstream boundary for first-time calibration.
-func sumWeeklyResetUsage(ctx context.Context, tx *sql.Tx, idColumn string, id int64, currentStart *time.Time, windowStart time.Time) (float64, error) {
+func sumWeeklyResetUsage(ctx context.Context, tx *sql.Tx, idColumn string, id int64, currentStart *time.Time, windowStart time.Time, resetBaseline ...*time.Time) (float64, error) {
+	var baseline *time.Time
+	if len(resetBaseline) > 0 {
+		baseline = resetBaseline[0]
+	}
 	var sinceQuery, rangeQuery string
 	switch idColumn {
 	case "api_key_id":
@@ -692,6 +697,9 @@ func sumWeeklyResetUsage(ctx context.Context, tx *sql.Tx, idColumn string, id in
 		return 0, errors.New("unsupported weekly reset usage id column")
 	}
 	if currentStart == nil {
+		if baseline != nil && baseline.After(windowStart) {
+			windowStart = *baseline
+		}
 		var amount float64
 		err := tx.QueryRowContext(ctx, sinceQuery, id, windowStart).Scan(&amount)
 		return amount, err
@@ -702,6 +710,12 @@ func sumWeeklyResetUsage(ctx context.Context, tx *sql.Tx, idColumn string, id in
 	start, end := windowStart, *currentStart
 	if currentStart.Before(windowStart) {
 		start, end = *currentStart, windowStart
+	}
+	if baseline != nil && baseline.After(start) {
+		start = *baseline
+	}
+	if !start.Before(end) {
+		return 0, nil
 	}
 	var amount float64
 	err := tx.QueryRowContext(ctx, rangeQuery, id, start, end).Scan(&amount)

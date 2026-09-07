@@ -1,0 +1,23 @@
+{
+  "gpt-5.6-sol": {
+    "input_cost_per_token": 0.000004,
+    "output_cost_per_token": 0.00002,
+    "cache_read_input_token_cost": 0.0000004,
+    "cache_creation_input_token_cost": 0.000005,
+    "input_cost_per_token_priority": 0.000008,
+    "output_cost_per_token_priority": 0.00004,
+    "cache_read_input_token_cost_priority": 0.0000008,
+    "cache_creation_input_token_cost_priority": 0.00001,
+    "input_cost_per_token_above_272k_tokens": 0.000008,
+    "output_cost_per_token_above_272k_tokens": 0.00003,
+    "cache_read_input_token_cost_above_272k_tokens": 0.0000008,
+    "cache_creation_input_token_cost_above_272k_tokens": 0.00001,
+    "input_cost_per_token_above_272k_tokens_priority": 0.000016,
+    "output_cost_per_token_above_272k_tokens_priority": 0.00006,
+    "cache_read_input_token_cost_above_272k_tokens_priority": 0.0000016,
+    "cache_creation_input_token_cost_above_272k_tokens_priority": 0.00002,
+    "long_context_input_token_threshold": 272000,
+    "long_context_input_cost_multiplier": 2,
+    "long_context_output_cost_multiplier": 1.5
+  }
+}

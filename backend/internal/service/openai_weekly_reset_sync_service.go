@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"math"
 	"sort"
 	"sync"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 const (
 	openAIWeeklyWindowSeconds         int64 = 7 * 24 * 60 * 60
-	openAIWeeklySyncInterval                = 5 * time.Minute
+	openAIWeeklySyncInterval                = time.Minute
 	openAIWeeklySyncCycleTimeout            = 4 * time.Minute
 	openAIWeeklyWindowJitterTolerance       = 5 * time.Minute
 )
@@ -237,6 +238,7 @@ func (s *OpenAIWeeklyResetSyncService) syncOnce(ctx context.Context, forceInvali
 		}
 		logOpenAIWeeklySkippedGroups(result.SkippedGroups)
 		s.applyReconcileResult(ctx, result)
+		s.reconcileUpstreamQuota(ctx, accountID, windowStart, usage)
 		if result.UpdatedAPIKeys > 0 || result.UpdatedSubscriptions > 0 {
 			slog.Info("openai_weekly_reset_synced",
 				"account_id", accountID,
@@ -282,7 +284,35 @@ func (s *OpenAIWeeklyResetSyncService) reconcileObservedWeeklyWindow(accountID i
 		return
 	}
 	s.applyReconcileResult(ctx, result)
+	s.reconcileUpstreamQuota(ctx, accountID, windowStart, usage)
 	s.flushPendingInvalidations(ctx)
+}
+
+type openAIWeeklyQuotaRepository interface {
+	ReconcileUpstreamWeeklyQuota(context.Context, int64, time.Time, time.Time, float64) error
+}
+
+func (s *OpenAIWeeklyResetSyncService) reconcileUpstreamQuota(ctx context.Context, accountID int64, windowStart time.Time, usage *OpenAIQuotaUsage) {
+	repo, ok := s.repo.(openAIWeeklyQuotaRepository)
+	if !ok || usage == nil || usage.RateLimit == nil {
+		return
+	}
+	for _, window := range []*OpenAIRateLimitWindow{usage.RateLimit.PrimaryWindow, usage.RateLimit.SecondaryWindow} {
+		if window == nil || window.LimitWindowSeconds != openAIWeeklyWindowSeconds {
+			continue
+		}
+		if math.IsNaN(window.UsedPercent) || math.IsInf(window.UsedPercent, 0) || window.UsedPercent < 0 || window.UsedPercent > 100 {
+			return
+		}
+		observedAt := time.Now().UTC()
+		if usage.FetchedAt > 0 {
+			observedAt = time.Unix(usage.FetchedAt, 0).UTC()
+		}
+		if err := repo.ReconcileUpstreamWeeklyQuota(ctx, accountID, windowStart, observedAt, window.UsedPercent); err != nil {
+			slog.Warn("openai_weekly_quota_sync_failed", "account_id", accountID, "error", err)
+		}
+		return
+	}
 }
 
 func setOpenAIWeeklyResetObservationService(s *OpenAIWeeklyResetSyncService) {

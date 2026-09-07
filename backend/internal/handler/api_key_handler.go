@@ -58,10 +58,11 @@ type UpdateAPIKeyRequest struct {
 	ResetQuota  *bool     `json:"reset_quota"`  // 重置已用配额
 
 	// Rate limit fields (nil = no change, 0 = unlimited)
-	RateLimit5h         *float64 `json:"rate_limit_5h"`
-	RateLimit1d         *float64 `json:"rate_limit_1d"`
-	RateLimit7d         *float64 `json:"rate_limit_7d"`
-	ResetRateLimitUsage *bool    `json:"reset_rate_limit_usage"` // 重置限速用量
+	RateLimit5h                *float64 `json:"rate_limit_5h"`
+	RateLimit1d                *float64 `json:"rate_limit_1d"`
+	RateLimit7d                *float64 `json:"rate_limit_7d"`
+	ResetRateLimitUsage        *bool    `json:"reset_rate_limit_usage"` // 重置限速用量
+	UpstreamWeeklyLimitPercent *float64 `json:"upstream_weekly_limit_percent"`
 }
 
 func validAPIKeyLimit(v float64) bool { return !math.IsNaN(v) && !math.IsInf(v, 0) && v >= 0 }
@@ -252,14 +253,15 @@ func (h *APIKeyHandler) Update(c *gin.Context) {
 	}
 
 	svcReq := service.UpdateAPIKeyRequest{
-		IPWhitelist:         req.IPWhitelist,
-		IPBlacklist:         req.IPBlacklist,
-		Quota:               req.Quota,
-		ResetQuota:          req.ResetQuota,
-		RateLimit5h:         req.RateLimit5h,
-		RateLimit1d:         req.RateLimit1d,
-		RateLimit7d:         req.RateLimit7d,
-		ResetRateLimitUsage: req.ResetRateLimitUsage,
+		IPWhitelist:                req.IPWhitelist,
+		IPBlacklist:                req.IPBlacklist,
+		Quota:                      req.Quota,
+		ResetQuota:                 req.ResetQuota,
+		RateLimit5h:                req.RateLimit5h,
+		RateLimit1d:                req.RateLimit1d,
+		RateLimit7d:                req.RateLimit7d,
+		ResetRateLimitUsage:        req.ResetRateLimitUsage,
+		UpstreamWeeklyLimitPercent: req.UpstreamWeeklyLimitPercent,
 	}
 	if req.Name != "" {
 		svcReq.Name = &req.Name

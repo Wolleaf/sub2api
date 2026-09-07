@@ -49,6 +49,16 @@ const (
 	FieldRateLimit1d = "rate_limit_1d"
 	// FieldRateLimit7d holds the string denoting the rate_limit_7d field in the database.
 	FieldRateLimit7d = "rate_limit_7d"
+	// FieldRateLimitResetAt holds the string denoting the rate_limit_reset_at field in the database.
+	FieldRateLimitResetAt = "rate_limit_reset_at"
+	// FieldUpstreamWeeklyLimitPercent holds the string denoting the upstream_weekly_limit_percent field in the database.
+	FieldUpstreamWeeklyLimitPercent = "upstream_weekly_limit_percent"
+	// FieldUpstreamWeeklyUsagePercent holds the string denoting the upstream_weekly_usage_percent field in the database.
+	FieldUpstreamWeeklyUsagePercent = "upstream_weekly_usage_percent"
+	// FieldUpstreamWeeklyWindowStart holds the string denoting the upstream_weekly_window_start field in the database.
+	FieldUpstreamWeeklyWindowStart = "upstream_weekly_window_start"
+	// FieldUpstreamWeeklyObservedAt holds the string denoting the upstream_weekly_observed_at field in the database.
+	FieldUpstreamWeeklyObservedAt = "upstream_weekly_observed_at"
 	// FieldUsage5h holds the string denoting the usage_5h field in the database.
 	FieldUsage5h = "usage_5h"
 	// FieldUsage1d holds the string denoting the usage_1d field in the database.
@@ -112,6 +122,11 @@ var Columns = []string{
 	FieldRateLimit5h,
 	FieldRateLimit1d,
 	FieldRateLimit7d,
+	FieldRateLimitResetAt,
+	FieldUpstreamWeeklyLimitPercent,
+	FieldUpstreamWeeklyUsagePercent,
+	FieldUpstreamWeeklyWindowStart,
+	FieldUpstreamWeeklyObservedAt,
 	FieldUsage5h,
 	FieldUsage1d,
 	FieldUsage7d,
@@ -162,6 +177,10 @@ var (
 	DefaultRateLimit1d float64
 	// DefaultRateLimit7d holds the default value on creation for the "rate_limit_7d" field.
 	DefaultRateLimit7d float64
+	// DefaultUpstreamWeeklyLimitPercent holds the default value on creation for the "upstream_weekly_limit_percent" field.
+	DefaultUpstreamWeeklyLimitPercent float64
+	// DefaultUpstreamWeeklyUsagePercent holds the default value on creation for the "upstream_weekly_usage_percent" field.
+	DefaultUpstreamWeeklyUsagePercent float64
 	// DefaultUsage5h holds the default value on creation for the "usage_5h" field.
 	DefaultUsage5h float64
 	// DefaultUsage1d holds the default value on creation for the "usage_1d" field.
@@ -251,6 +270,31 @@ func ByRateLimit1d(opts ...sql.OrderTermOption) OrderOption {
 // ByRateLimit7d orders the results by the rate_limit_7d field.
 func ByRateLimit7d(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRateLimit7d, opts...).ToFunc()
+}
+
+// ByRateLimitResetAt orders the results by the rate_limit_reset_at field.
+func ByRateLimitResetAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRateLimitResetAt, opts...).ToFunc()
+}
+
+// ByUpstreamWeeklyLimitPercent orders the results by the upstream_weekly_limit_percent field.
+func ByUpstreamWeeklyLimitPercent(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpstreamWeeklyLimitPercent, opts...).ToFunc()
+}
+
+// ByUpstreamWeeklyUsagePercent orders the results by the upstream_weekly_usage_percent field.
+func ByUpstreamWeeklyUsagePercent(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpstreamWeeklyUsagePercent, opts...).ToFunc()
+}
+
+// ByUpstreamWeeklyWindowStart orders the results by the upstream_weekly_window_start field.
+func ByUpstreamWeeklyWindowStart(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpstreamWeeklyWindowStart, opts...).ToFunc()
+}
+
+// ByUpstreamWeeklyObservedAt orders the results by the upstream_weekly_observed_at field.
+func ByUpstreamWeeklyObservedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpstreamWeeklyObservedAt, opts...).ToFunc()
 }
 
 // ByUsage5h orders the results by the usage_5h field.

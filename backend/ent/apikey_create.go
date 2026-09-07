@@ -223,6 +223,76 @@ func (_c *APIKeyCreate) SetNillableRateLimit7d(v *float64) *APIKeyCreate {
 	return _c
 }
 
+// SetRateLimitResetAt sets the "rate_limit_reset_at" field.
+func (_c *APIKeyCreate) SetRateLimitResetAt(v time.Time) *APIKeyCreate {
+	_c.mutation.SetRateLimitResetAt(v)
+	return _c
+}
+
+// SetNillableRateLimitResetAt sets the "rate_limit_reset_at" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableRateLimitResetAt(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetRateLimitResetAt(*v)
+	}
+	return _c
+}
+
+// SetUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field.
+func (_c *APIKeyCreate) SetUpstreamWeeklyLimitPercent(v float64) *APIKeyCreate {
+	_c.mutation.SetUpstreamWeeklyLimitPercent(v)
+	return _c
+}
+
+// SetNillableUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableUpstreamWeeklyLimitPercent(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetUpstreamWeeklyLimitPercent(*v)
+	}
+	return _c
+}
+
+// SetUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field.
+func (_c *APIKeyCreate) SetUpstreamWeeklyUsagePercent(v float64) *APIKeyCreate {
+	_c.mutation.SetUpstreamWeeklyUsagePercent(v)
+	return _c
+}
+
+// SetNillableUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableUpstreamWeeklyUsagePercent(v *float64) *APIKeyCreate {
+	if v != nil {
+		_c.SetUpstreamWeeklyUsagePercent(*v)
+	}
+	return _c
+}
+
+// SetUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field.
+func (_c *APIKeyCreate) SetUpstreamWeeklyWindowStart(v time.Time) *APIKeyCreate {
+	_c.mutation.SetUpstreamWeeklyWindowStart(v)
+	return _c
+}
+
+// SetNillableUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableUpstreamWeeklyWindowStart(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetUpstreamWeeklyWindowStart(*v)
+	}
+	return _c
+}
+
+// SetUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field.
+func (_c *APIKeyCreate) SetUpstreamWeeklyObservedAt(v time.Time) *APIKeyCreate {
+	_c.mutation.SetUpstreamWeeklyObservedAt(v)
+	return _c
+}
+
+// SetNillableUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableUpstreamWeeklyObservedAt(v *time.Time) *APIKeyCreate {
+	if v != nil {
+		_c.SetUpstreamWeeklyObservedAt(*v)
+	}
+	return _c
+}
+
 // SetUsage5h sets the "usage_5h" field.
 func (_c *APIKeyCreate) SetUsage5h(v float64) *APIKeyCreate {
 	_c.mutation.SetUsage5h(v)
@@ -407,6 +477,14 @@ func (_c *APIKeyCreate) defaults() error {
 		v := apikey.DefaultRateLimit7d
 		_c.mutation.SetRateLimit7d(v)
 	}
+	if _, ok := _c.mutation.UpstreamWeeklyLimitPercent(); !ok {
+		v := apikey.DefaultUpstreamWeeklyLimitPercent
+		_c.mutation.SetUpstreamWeeklyLimitPercent(v)
+	}
+	if _, ok := _c.mutation.UpstreamWeeklyUsagePercent(); !ok {
+		v := apikey.DefaultUpstreamWeeklyUsagePercent
+		_c.mutation.SetUpstreamWeeklyUsagePercent(v)
+	}
 	if _, ok := _c.mutation.Usage5h(); !ok {
 		v := apikey.DefaultUsage5h
 		_c.mutation.SetUsage5h(v)
@@ -471,6 +549,12 @@ func (_c *APIKeyCreate) check() error {
 	}
 	if _, ok := _c.mutation.RateLimit7d(); !ok {
 		return &ValidationError{Name: "rate_limit_7d", err: errors.New(`ent: missing required field "APIKey.rate_limit_7d"`)}
+	}
+	if _, ok := _c.mutation.UpstreamWeeklyLimitPercent(); !ok {
+		return &ValidationError{Name: "upstream_weekly_limit_percent", err: errors.New(`ent: missing required field "APIKey.upstream_weekly_limit_percent"`)}
+	}
+	if _, ok := _c.mutation.UpstreamWeeklyUsagePercent(); !ok {
+		return &ValidationError{Name: "upstream_weekly_usage_percent", err: errors.New(`ent: missing required field "APIKey.upstream_weekly_usage_percent"`)}
 	}
 	if _, ok := _c.mutation.Usage5h(); !ok {
 		return &ValidationError{Name: "usage_5h", err: errors.New(`ent: missing required field "APIKey.usage_5h"`)}
@@ -570,6 +654,26 @@ func (_c *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.RateLimit7d(); ok {
 		_spec.SetField(apikey.FieldRateLimit7d, field.TypeFloat64, value)
 		_node.RateLimit7d = value
+	}
+	if value, ok := _c.mutation.RateLimitResetAt(); ok {
+		_spec.SetField(apikey.FieldRateLimitResetAt, field.TypeTime, value)
+		_node.RateLimitResetAt = &value
+	}
+	if value, ok := _c.mutation.UpstreamWeeklyLimitPercent(); ok {
+		_spec.SetField(apikey.FieldUpstreamWeeklyLimitPercent, field.TypeFloat64, value)
+		_node.UpstreamWeeklyLimitPercent = value
+	}
+	if value, ok := _c.mutation.UpstreamWeeklyUsagePercent(); ok {
+		_spec.SetField(apikey.FieldUpstreamWeeklyUsagePercent, field.TypeFloat64, value)
+		_node.UpstreamWeeklyUsagePercent = value
+	}
+	if value, ok := _c.mutation.UpstreamWeeklyWindowStart(); ok {
+		_spec.SetField(apikey.FieldUpstreamWeeklyWindowStart, field.TypeTime, value)
+		_node.UpstreamWeeklyWindowStart = &value
+	}
+	if value, ok := _c.mutation.UpstreamWeeklyObservedAt(); ok {
+		_spec.SetField(apikey.FieldUpstreamWeeklyObservedAt, field.TypeTime, value)
+		_node.UpstreamWeeklyObservedAt = &value
 	}
 	if value, ok := _c.mutation.Usage5h(); ok {
 		_spec.SetField(apikey.FieldUsage5h, field.TypeFloat64, value)
@@ -952,6 +1056,96 @@ func (u *APIKeyUpsert) UpdateRateLimit7d() *APIKeyUpsert {
 // AddRateLimit7d adds v to the "rate_limit_7d" field.
 func (u *APIKeyUpsert) AddRateLimit7d(v float64) *APIKeyUpsert {
 	u.Add(apikey.FieldRateLimit7d, v)
+	return u
+}
+
+// SetRateLimitResetAt sets the "rate_limit_reset_at" field.
+func (u *APIKeyUpsert) SetRateLimitResetAt(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldRateLimitResetAt, v)
+	return u
+}
+
+// UpdateRateLimitResetAt sets the "rate_limit_reset_at" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateRateLimitResetAt() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldRateLimitResetAt)
+	return u
+}
+
+// ClearRateLimitResetAt clears the value of the "rate_limit_reset_at" field.
+func (u *APIKeyUpsert) ClearRateLimitResetAt() *APIKeyUpsert {
+	u.SetNull(apikey.FieldRateLimitResetAt)
+	return u
+}
+
+// SetUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field.
+func (u *APIKeyUpsert) SetUpstreamWeeklyLimitPercent(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldUpstreamWeeklyLimitPercent, v)
+	return u
+}
+
+// UpdateUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateUpstreamWeeklyLimitPercent() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldUpstreamWeeklyLimitPercent)
+	return u
+}
+
+// AddUpstreamWeeklyLimitPercent adds v to the "upstream_weekly_limit_percent" field.
+func (u *APIKeyUpsert) AddUpstreamWeeklyLimitPercent(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldUpstreamWeeklyLimitPercent, v)
+	return u
+}
+
+// SetUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field.
+func (u *APIKeyUpsert) SetUpstreamWeeklyUsagePercent(v float64) *APIKeyUpsert {
+	u.Set(apikey.FieldUpstreamWeeklyUsagePercent, v)
+	return u
+}
+
+// UpdateUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateUpstreamWeeklyUsagePercent() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldUpstreamWeeklyUsagePercent)
+	return u
+}
+
+// AddUpstreamWeeklyUsagePercent adds v to the "upstream_weekly_usage_percent" field.
+func (u *APIKeyUpsert) AddUpstreamWeeklyUsagePercent(v float64) *APIKeyUpsert {
+	u.Add(apikey.FieldUpstreamWeeklyUsagePercent, v)
+	return u
+}
+
+// SetUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field.
+func (u *APIKeyUpsert) SetUpstreamWeeklyWindowStart(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldUpstreamWeeklyWindowStart, v)
+	return u
+}
+
+// UpdateUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateUpstreamWeeklyWindowStart() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldUpstreamWeeklyWindowStart)
+	return u
+}
+
+// ClearUpstreamWeeklyWindowStart clears the value of the "upstream_weekly_window_start" field.
+func (u *APIKeyUpsert) ClearUpstreamWeeklyWindowStart() *APIKeyUpsert {
+	u.SetNull(apikey.FieldUpstreamWeeklyWindowStart)
+	return u
+}
+
+// SetUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field.
+func (u *APIKeyUpsert) SetUpstreamWeeklyObservedAt(v time.Time) *APIKeyUpsert {
+	u.Set(apikey.FieldUpstreamWeeklyObservedAt, v)
+	return u
+}
+
+// UpdateUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field to the value that was provided on create.
+func (u *APIKeyUpsert) UpdateUpstreamWeeklyObservedAt() *APIKeyUpsert {
+	u.SetExcluded(apikey.FieldUpstreamWeeklyObservedAt)
+	return u
+}
+
+// ClearUpstreamWeeklyObservedAt clears the value of the "upstream_weekly_observed_at" field.
+func (u *APIKeyUpsert) ClearUpstreamWeeklyObservedAt() *APIKeyUpsert {
+	u.SetNull(apikey.FieldUpstreamWeeklyObservedAt)
 	return u
 }
 
@@ -1406,6 +1600,111 @@ func (u *APIKeyUpsertOne) AddRateLimit7d(v float64) *APIKeyUpsertOne {
 func (u *APIKeyUpsertOne) UpdateRateLimit7d() *APIKeyUpsertOne {
 	return u.Update(func(s *APIKeyUpsert) {
 		s.UpdateRateLimit7d()
+	})
+}
+
+// SetRateLimitResetAt sets the "rate_limit_reset_at" field.
+func (u *APIKeyUpsertOne) SetRateLimitResetAt(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimitResetAt(v)
+	})
+}
+
+// UpdateRateLimitResetAt sets the "rate_limit_reset_at" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateRateLimitResetAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimitResetAt()
+	})
+}
+
+// ClearRateLimitResetAt clears the value of the "rate_limit_reset_at" field.
+func (u *APIKeyUpsertOne) ClearRateLimitResetAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearRateLimitResetAt()
+	})
+}
+
+// SetUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field.
+func (u *APIKeyUpsertOne) SetUpstreamWeeklyLimitPercent(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyLimitPercent(v)
+	})
+}
+
+// AddUpstreamWeeklyLimitPercent adds v to the "upstream_weekly_limit_percent" field.
+func (u *APIKeyUpsertOne) AddUpstreamWeeklyLimitPercent(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUpstreamWeeklyLimitPercent(v)
+	})
+}
+
+// UpdateUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateUpstreamWeeklyLimitPercent() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyLimitPercent()
+	})
+}
+
+// SetUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field.
+func (u *APIKeyUpsertOne) SetUpstreamWeeklyUsagePercent(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyUsagePercent(v)
+	})
+}
+
+// AddUpstreamWeeklyUsagePercent adds v to the "upstream_weekly_usage_percent" field.
+func (u *APIKeyUpsertOne) AddUpstreamWeeklyUsagePercent(v float64) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUpstreamWeeklyUsagePercent(v)
+	})
+}
+
+// UpdateUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateUpstreamWeeklyUsagePercent() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyUsagePercent()
+	})
+}
+
+// SetUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field.
+func (u *APIKeyUpsertOne) SetUpstreamWeeklyWindowStart(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyWindowStart(v)
+	})
+}
+
+// UpdateUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateUpstreamWeeklyWindowStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyWindowStart()
+	})
+}
+
+// ClearUpstreamWeeklyWindowStart clears the value of the "upstream_weekly_window_start" field.
+func (u *APIKeyUpsertOne) ClearUpstreamWeeklyWindowStart() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearUpstreamWeeklyWindowStart()
+	})
+}
+
+// SetUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field.
+func (u *APIKeyUpsertOne) SetUpstreamWeeklyObservedAt(v time.Time) *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyObservedAt(v)
+	})
+}
+
+// UpdateUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field to the value that was provided on create.
+func (u *APIKeyUpsertOne) UpdateUpstreamWeeklyObservedAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyObservedAt()
+	})
+}
+
+// ClearUpstreamWeeklyObservedAt clears the value of the "upstream_weekly_observed_at" field.
+func (u *APIKeyUpsertOne) ClearUpstreamWeeklyObservedAt() *APIKeyUpsertOne {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearUpstreamWeeklyObservedAt()
 	})
 }
 
@@ -2044,6 +2343,111 @@ func (u *APIKeyUpsertBulk) AddRateLimit7d(v float64) *APIKeyUpsertBulk {
 func (u *APIKeyUpsertBulk) UpdateRateLimit7d() *APIKeyUpsertBulk {
 	return u.Update(func(s *APIKeyUpsert) {
 		s.UpdateRateLimit7d()
+	})
+}
+
+// SetRateLimitResetAt sets the "rate_limit_reset_at" field.
+func (u *APIKeyUpsertBulk) SetRateLimitResetAt(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetRateLimitResetAt(v)
+	})
+}
+
+// UpdateRateLimitResetAt sets the "rate_limit_reset_at" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateRateLimitResetAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateRateLimitResetAt()
+	})
+}
+
+// ClearRateLimitResetAt clears the value of the "rate_limit_reset_at" field.
+func (u *APIKeyUpsertBulk) ClearRateLimitResetAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearRateLimitResetAt()
+	})
+}
+
+// SetUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field.
+func (u *APIKeyUpsertBulk) SetUpstreamWeeklyLimitPercent(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyLimitPercent(v)
+	})
+}
+
+// AddUpstreamWeeklyLimitPercent adds v to the "upstream_weekly_limit_percent" field.
+func (u *APIKeyUpsertBulk) AddUpstreamWeeklyLimitPercent(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUpstreamWeeklyLimitPercent(v)
+	})
+}
+
+// UpdateUpstreamWeeklyLimitPercent sets the "upstream_weekly_limit_percent" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateUpstreamWeeklyLimitPercent() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyLimitPercent()
+	})
+}
+
+// SetUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field.
+func (u *APIKeyUpsertBulk) SetUpstreamWeeklyUsagePercent(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyUsagePercent(v)
+	})
+}
+
+// AddUpstreamWeeklyUsagePercent adds v to the "upstream_weekly_usage_percent" field.
+func (u *APIKeyUpsertBulk) AddUpstreamWeeklyUsagePercent(v float64) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.AddUpstreamWeeklyUsagePercent(v)
+	})
+}
+
+// UpdateUpstreamWeeklyUsagePercent sets the "upstream_weekly_usage_percent" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateUpstreamWeeklyUsagePercent() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyUsagePercent()
+	})
+}
+
+// SetUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field.
+func (u *APIKeyUpsertBulk) SetUpstreamWeeklyWindowStart(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyWindowStart(v)
+	})
+}
+
+// UpdateUpstreamWeeklyWindowStart sets the "upstream_weekly_window_start" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateUpstreamWeeklyWindowStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyWindowStart()
+	})
+}
+
+// ClearUpstreamWeeklyWindowStart clears the value of the "upstream_weekly_window_start" field.
+func (u *APIKeyUpsertBulk) ClearUpstreamWeeklyWindowStart() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearUpstreamWeeklyWindowStart()
+	})
+}
+
+// SetUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field.
+func (u *APIKeyUpsertBulk) SetUpstreamWeeklyObservedAt(v time.Time) *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.SetUpstreamWeeklyObservedAt(v)
+	})
+}
+
+// UpdateUpstreamWeeklyObservedAt sets the "upstream_weekly_observed_at" field to the value that was provided on create.
+func (u *APIKeyUpsertBulk) UpdateUpstreamWeeklyObservedAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.UpdateUpstreamWeeklyObservedAt()
+	})
+}
+
+// ClearUpstreamWeeklyObservedAt clears the value of the "upstream_weekly_observed_at" field.
+func (u *APIKeyUpsertBulk) ClearUpstreamWeeklyObservedAt() *APIKeyUpsertBulk {
+	return u.Update(func(s *APIKeyUpsert) {
+		s.ClearUpstreamWeeklyObservedAt()
 	})
 }
 

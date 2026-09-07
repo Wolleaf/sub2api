@@ -54,6 +54,16 @@ type APIKey struct {
 	RateLimit1d float64 `json:"rate_limit_1d,omitempty"`
 	// Rate limit in USD per 7 days (0 = unlimited)
 	RateLimit7d float64 `json:"rate_limit_7d,omitempty"`
+	// Manual dollar-counter reset baseline; independent of the upstream week
+	RateLimitResetAt *time.Time `json:"rate_limit_reset_at,omitempty"`
+	// UpstreamWeeklyLimitPercent holds the value of the "upstream_weekly_limit_percent" field.
+	UpstreamWeeklyLimitPercent float64 `json:"upstream_weekly_limit_percent,omitempty"`
+	// UpstreamWeeklyUsagePercent holds the value of the "upstream_weekly_usage_percent" field.
+	UpstreamWeeklyUsagePercent float64 `json:"upstream_weekly_usage_percent,omitempty"`
+	// UpstreamWeeklyWindowStart holds the value of the "upstream_weekly_window_start" field.
+	UpstreamWeeklyWindowStart *time.Time `json:"upstream_weekly_window_start,omitempty"`
+	// UpstreamWeeklyObservedAt holds the value of the "upstream_weekly_observed_at" field.
+	UpstreamWeeklyObservedAt *time.Time `json:"upstream_weekly_observed_at,omitempty"`
 	// Used amount in USD for the current 5h window
 	Usage5h float64 `json:"usage_5h,omitempty"`
 	// Used amount in USD for the current 1d window
@@ -123,13 +133,13 @@ func (*APIKey) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case apikey.FieldIPWhitelist, apikey.FieldIPBlacklist:
 			values[i] = new([]byte)
-		case apikey.FieldQuota, apikey.FieldQuotaUsed, apikey.FieldRateLimit5h, apikey.FieldRateLimit1d, apikey.FieldRateLimit7d, apikey.FieldUsage5h, apikey.FieldUsage1d, apikey.FieldUsage7d:
+		case apikey.FieldQuota, apikey.FieldQuotaUsed, apikey.FieldRateLimit5h, apikey.FieldRateLimit1d, apikey.FieldRateLimit7d, apikey.FieldUpstreamWeeklyLimitPercent, apikey.FieldUpstreamWeeklyUsagePercent, apikey.FieldUsage5h, apikey.FieldUsage1d, apikey.FieldUsage7d:
 			values[i] = new(sql.NullFloat64)
 		case apikey.FieldID, apikey.FieldUserID, apikey.FieldGroupID:
 			values[i] = new(sql.NullInt64)
 		case apikey.FieldKey, apikey.FieldName, apikey.FieldStatus:
 			values[i] = new(sql.NullString)
-		case apikey.FieldCreatedAt, apikey.FieldUpdatedAt, apikey.FieldDeletedAt, apikey.FieldLastUsedAt, apikey.FieldExpiresAt, apikey.FieldWindow5hStart, apikey.FieldWindow1dStart, apikey.FieldWindow7dStart:
+		case apikey.FieldCreatedAt, apikey.FieldUpdatedAt, apikey.FieldDeletedAt, apikey.FieldLastUsedAt, apikey.FieldExpiresAt, apikey.FieldRateLimitResetAt, apikey.FieldUpstreamWeeklyWindowStart, apikey.FieldUpstreamWeeklyObservedAt, apikey.FieldWindow5hStart, apikey.FieldWindow1dStart, apikey.FieldWindow7dStart:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -261,6 +271,39 @@ func (_m *APIKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field rate_limit_7d", values[i])
 			} else if value.Valid {
 				_m.RateLimit7d = value.Float64
+			}
+		case apikey.FieldRateLimitResetAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field rate_limit_reset_at", values[i])
+			} else if value.Valid {
+				_m.RateLimitResetAt = new(time.Time)
+				*_m.RateLimitResetAt = value.Time
+			}
+		case apikey.FieldUpstreamWeeklyLimitPercent:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field upstream_weekly_limit_percent", values[i])
+			} else if value.Valid {
+				_m.UpstreamWeeklyLimitPercent = value.Float64
+			}
+		case apikey.FieldUpstreamWeeklyUsagePercent:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field upstream_weekly_usage_percent", values[i])
+			} else if value.Valid {
+				_m.UpstreamWeeklyUsagePercent = value.Float64
+			}
+		case apikey.FieldUpstreamWeeklyWindowStart:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field upstream_weekly_window_start", values[i])
+			} else if value.Valid {
+				_m.UpstreamWeeklyWindowStart = new(time.Time)
+				*_m.UpstreamWeeklyWindowStart = value.Time
+			}
+		case apikey.FieldUpstreamWeeklyObservedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field upstream_weekly_observed_at", values[i])
+			} else if value.Valid {
+				_m.UpstreamWeeklyObservedAt = new(time.Time)
+				*_m.UpstreamWeeklyObservedAt = value.Time
 			}
 		case apikey.FieldUsage5h:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
@@ -410,6 +453,27 @@ func (_m *APIKey) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("rate_limit_7d=")
 	builder.WriteString(fmt.Sprintf("%v", _m.RateLimit7d))
+	builder.WriteString(", ")
+	if v := _m.RateLimitResetAt; v != nil {
+		builder.WriteString("rate_limit_reset_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	builder.WriteString("upstream_weekly_limit_percent=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UpstreamWeeklyLimitPercent))
+	builder.WriteString(", ")
+	builder.WriteString("upstream_weekly_usage_percent=")
+	builder.WriteString(fmt.Sprintf("%v", _m.UpstreamWeeklyUsagePercent))
+	builder.WriteString(", ")
+	if v := _m.UpstreamWeeklyWindowStart; v != nil {
+		builder.WriteString("upstream_weekly_window_start=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
+	if v := _m.UpstreamWeeklyObservedAt; v != nil {
+		builder.WriteString("upstream_weekly_observed_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
 	builder.WriteString(", ")
 	builder.WriteString("usage_5h=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Usage5h))
