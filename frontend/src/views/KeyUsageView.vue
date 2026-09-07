@@ -219,9 +219,9 @@
                     </template>
                     <template v-else>
                       <span class="text-3xl font-bold tabular-nums text-gray-900 dark:text-white">
-                        {{ displayPcts[i] ?? 0 }}%
+                        {{ ring.displayPercent ?? ((displayPcts[i] ?? 0) + '%') }}
                       </span>
-                      <span class="text-xs text-gray-500 dark:text-dark-400 mt-0.5">{{ t('keyUsage.used') }}</span>
+                      <span class="text-xs text-gray-500 dark:text-dark-400 mt-0.5">{{ ring.usedLabel ?? t('keyUsage.used') }}</span>
                       <span
                         class="text-sm font-semibold mt-1 tabular-nums"
                         :style="{ color: RING_GRADIENTS[i % 4].from }"
@@ -542,6 +542,8 @@ interface RingItem {
   title: string
   pct: number
   amount: string
+  displayPercent?: string
+  usedLabel?: string
   isBalance?: boolean
   iconType: 'clock' | 'calendar' | 'dollar'
   resetAt?: string | null
@@ -617,7 +619,9 @@ const ringItems = computed<RingItem[]>(() => {
     if (data.upstream_weekly_quota) {
       const share = data.upstream_weekly_quota
       items.push({ title: t('keys.upstreamWeeklyQuota'), pct: share.limit > 0 ? Math.min(100, Math.round(share.used / share.limit * 100)) : 0,
-        amount: `${share.observed_at ? Number(share.used).toFixed(2) + '%' : '—'} / ${share.limit}%`, iconType: 'calendar', resetAt: share.reset_at })
+        displayPercent: share.observed_at ? Number(share.used).toFixed(2) + '%' : '—',
+        usedLabel: t('keys.upstreamWeeklyAccountUsed'),
+        amount: t('keys.upstreamWeeklyAllocated', { percent: share.limit }), iconType: 'calendar', resetAt: share.reset_at })
     }
     if (data.quota) {
       const pct = data.quota.limit > 0 ? Math.min(Math.round((data.quota.used / data.quota.limit) * 100), 100) : 0

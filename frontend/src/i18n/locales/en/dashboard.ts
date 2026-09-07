@@ -266,6 +266,8 @@ export default {
     upstreamWeeklyEstimated: 'Estimated usage / allocated share',
     upstreamWeeklySyncing: 'Waiting for upstream sync',
     upstreamWeeklyReset: 'Upstream reset time',
+    upstreamWeeklyAccountUsed: 'Estimated account usage',
+    upstreamWeeklyAllocated: 'Allocated share: {percent}%',
     rateLimitHint: 'Set the maximum spending for this key within each time window. 0 = unlimited.',
     rateLimitUsage: 'Rate Limit Usage',
     resetRateLimitUsage: 'Reset Rate Limit Usage',

@@ -271,6 +271,8 @@ export default {
     upstreamWeeklyEstimated: '估算已用 / 分配比例',
     upstreamWeeklySyncing: '等待上游同步',
     upstreamWeeklyReset: '上游重置时间',
+    upstreamWeeklyAccountUsed: '估算占账号周额度',
+    upstreamWeeklyAllocated: '分配额度：{percent}%',
     rateLimitHint: '设置此密钥在指定时间窗口内的最大消费额。0 = 无限制。',
     rateLimitUsage: '速率限制用量',
     resetRateLimitUsage: '重置速率限制用量',
